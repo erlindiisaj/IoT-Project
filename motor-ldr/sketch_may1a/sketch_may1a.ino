@@ -1,11 +1,11 @@
 #include <ESP32Servo.h>
 
 Servo myServo;
-const int ldrPin = 35;  // Use GPIO 36 (A0)
+const int ldrPin = 18;  // Use GPIO 36 (A0)
 
 void setup() {
   Serial.begin(115200);
-  myServo.attach(22); // GPIO 2 for servo
+  myServo.attach(21); // GPIO 2 for servo
 }
 
 void loop() {
