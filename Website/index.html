@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smart Home Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+    <div class="dashboard">
+        <h1>Smart Home Control Panel</h1>
+
+        <div class="grid">
+        <div class="card light">
+            <h2>Light</h2>
+            <p>Status: <span id="light-state">--</span></p>
+            <button onclick="toggle('light')">Toggle Light</button>
+        </div>
+
+        <div class="card curtain">
+            <h2>Curtain</h2>
+            <p>Status: <span id="curtain-state">--</span></p>
+            <button onclick="toggle('curtain')">Toggle Curtain</button>
+        </div>
+
+        <div class="card mode">
+            <h2>Mode</h2>
+            <p>Status: <span id="mode-state">--</span></p>
+            <button onclick="toggle('mode')">Switch Mode</button>
+        </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    </body>
+</html>
