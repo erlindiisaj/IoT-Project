@@ -4,7 +4,7 @@ from .models import Room, Component, ComponentData
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'arduiono_id']
         read_only_fields = ['id']
 
 class ComponentSerializer(serializers.ModelSerializer):

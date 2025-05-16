@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAdminUser, AllowAny
 from .models import Room, Component, ComponentData
 from .serializer import RoomSerializer, ComponentSerializer, ComponentDataSerializer
 from django.shortcuts import get_object_or_404
+from iot.settings import MAXIMUM_ROOMS, MAXIMUM_COMPONENT_PER_TYPE
 
 # Create your views here.
 class RoomView(APIView):
@@ -18,6 +19,9 @@ class RoomView(APIView):
         return Response(serializer.data, status=200)
     
     def post(self, request):
+        if Room.objects.all().count() >= MAXIMUM_ROOMS:
+            return Response({"error": "Maximum number of supported rooms reached"}, status=400)
+
         serializer = RoomSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"error": serializer.errors}, status=400)
@@ -56,6 +60,9 @@ class ComponentView(APIView):
         serializer = ComponentSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"error": serializer.errors}, status=400)
+        
+        if Component.objects.filter(type=request.data['type']).count() >= MAXIMUM_COMPONENT_PER_TYPE:
+            return Response({"error": "Maximum number of the submitted component reached"}, status=400)
 
         serializer.save()
         return Response(serializer.data, status=201)
@@ -104,4 +111,3 @@ class ComponentDataView(APIView):
         component_data = ComponentData.objects.get(id=component_data_id)
         component_data.delete()
         return Response({"message": f"Component data with '{component_data.id}' deleted successfully"}, status=200)
-        

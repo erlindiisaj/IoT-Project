@@ -13,14 +13,20 @@ class Action(models.TextChoices):
     READ = 'READ', 'Read' # This action is used to read the state of a component
 
 class Type(models.TextChoices):
-    LIGHT = 'LIGHT', 'Light'
-    MOTOR = 'MOTOR', 'Motor'
-    THERMOSTAT = 'THERMOSTAT', 'Thermostat'
+    LED = 'LED', 'led'
+    MOTOR = 'MOTOR', 'motor'
+    DTH = 'DTH', 'dth'
+    LDR = 'LDR', 'ldr'
+    PIR = 'PIR', 'pir'
 
 # Create your models here.
 class Room(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)
+    arduiono_id = models.IntegerField(unique=True, validators=[
+            MinValueValidator(1),   # Minimum value
+            MaxValueValidator(3)  # Maximum value
+        ])
 
     def __str__(self):
         return self.name

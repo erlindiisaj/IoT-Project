@@ -134,3 +134,10 @@ REST_FRAMEWORK = {
     ),
     'EXCEPTION_HANDLER': 'iot.handlers.custom_exception_handler',
 }
+
+# DB settings
+ARDUINO_IP = '192.168.0.102'
+MAXIMUM_ROOMS = 3
+MAXIMUM_COMPONENT_PER_TYPE = 3
+
+ARDUINO_POST_PARAM = {'id', 'pin'}
