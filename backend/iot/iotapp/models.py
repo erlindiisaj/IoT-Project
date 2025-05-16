@@ -1,9 +1,16 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+class Mode(models.TextChoices):
+    AUTO = 'AUTO', 'Auto'
+    MANUAL = 'MANUAL', 'Manual'
+    SCHEDULE = 'SCHEDULE', 'Schedule'
 
 class Action(models.TextChoices):
     ON = 'ON', 'On'
     OFF = 'OFF', 'Off'
     TOGGLE = 'TOGGLE', 'Toggle'
+    READ = 'READ', 'Read' # This action is used to read the state of a component
 
 class Type(models.TextChoices):
     LIGHT = 'LIGHT', 'Light'
@@ -13,7 +20,10 @@ class Type(models.TextChoices):
 # Create your models here.
 class Room(models.Model):
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
 
 class Component(models.Model):
     id = models.AutoField(primary_key=True)
@@ -22,5 +32,31 @@ class Component(models.Model):
         choices=Type.choices,
         default=Type.LIGHT
         )
-    pin = models.IntegerField()
+    pin = models.IntegerField(unique=True, validators=[
+            MinValueValidator(1),   # Minimum value
+            MaxValueValidator(100)  # Maximum value
+        ])
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='components')
+
+    def __str__(self):
+        return f"{self.get_type_display()} on pin {self.pin} in {self.room.name}"
+    
+class ComponentData(models.Model):
+    id = models.AutoField(primary_key=True)
+    component = models.ForeignKey(Component, on_delete=models.CASCADE, related_name='data')
+    action = models.CharField(
+        max_length=50,
+        choices=Action.choices,
+        default=Action.OFF
+        )
+    mode = models.CharField(
+        max_length=50,
+        choices=Mode.choices,
+        default=Mode.AUTO
+        )
+    timestamp = models.DateTimeField(auto_now_add=True)
+    previous_value = models.CharField(max_length=50, null=True, blank=True)
+    current_value = models.CharField(max_length=50, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.component} - {self.get_action_display()} at {self.timestamp}"
