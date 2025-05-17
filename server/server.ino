@@ -1,8 +1,14 @@
 #include <WiFiS3.h>
+#include <Servo.h>
+#include <DHT.h>
 #include "wifi_creds.h"
+
+#define DHTTYPE DHT22
 
 WiFiServer server(80);
 int status = WL_IDLE_STATUS;
+
+const int duration = 15000;
 
 const int ROOMS = 3;  // 3 rooms × 5 devices = 15 pins
 
@@ -11,18 +17,19 @@ int mode[ROOMS] = {-1, -1, -1};
 int ledPins[ROOMS] = {-1, -1, -1};
 int ledValues[ROOMS] = {0, 0, 0};
 
-int motorPins[ROOMS]    = {-1, -1, -1};
+int motorPins[ROOMS] = {-1, -1, -1};
+Servo servoMotors[ROOMS];
 int motorValues[ROOMS] = {0, 0, 0};
 
-int dhtPins[ROOMS]      = {-1, -1, -1};
+int dhtPins[ROOMS] = {-1, -1, -1};
 DHT* dht_arr[ROOMS] = {nullptr, nullptr, nullptr};
 int dhtValues[ROOMS] = {-100, -100, -100};
 
-int ldrPins[ROOMS]      = {-1, -1, -1};
-int ldrValues[ROOMS]      = {0, 0, 0};
+int ldrPins[ROOMS] = {-1, -1, -1};
+int ldrValues[ROOMS] = {0, 0, 0};
 
-int motionPins[ROOMS]   = {-1, -1, -1};
-unsigned long lastMotionTrigger[ROOMS] = {0, 0, 0};
+int motionPins[ROOMS] = {-1, -1, -1};
+bool motionValues[ROOMS] = {false, false, false};
 
 void setup() {
   Serial.begin(115200);
@@ -32,7 +39,7 @@ void setup() {
     Serial.print("Connecting to ");
     Serial.println(WIFI_SSID);
     status = WiFi.begin(WIFI_SSID, WIFI_PASS);
-    millis(3000);
+    delay(3000);
   }
 
   Serial.println("Connected to WiFi");
@@ -58,7 +65,7 @@ void loop() {
       sendResponse(client, 405, "Method not allowed.");
     }
 
-    millis(1);
+    delay(1);
     client.stop();
     Serial.println("Client disconnected");
   }
@@ -113,16 +120,26 @@ void handlePutRequest(WiFiClient& client, const String& request) {
     return;
   }
 
-  if (request.indexOf("/led") >= 0) {
-    handleLedSetValue(id, val);
-  } else if (request.indexOf("/motor") >= 0) {
-    handleMotorSetValue(id, val);
-  } else if (request.indexOf("/mode") < 0){
-    sendResponse(client, 404, "Invalid POST endpoint.");
+  if (val < 0 || val > 100) {
+    sendResponse(client, 400, "Invalid value.");
     return;
   }
 
-  handleModeSetValue(id, val);
+  if (request.indexOf("/led") >= 0) {
+    switchLed(id, val);
+  } else if (request.indexOf("/motor") >= 0) {
+    rotateMotor(id, val);
+  } else if (request.indexOf("/mode") >= 0){
+    if(val != 0 && val != 1){
+      sendResponse(client, 400, "Invalid value.");
+      return;
+    }
+
+    mode[id] = val;
+  } else {
+    sendResponse(client, 404, "Invalid POST endpoint.");
+    return;
+  }
 
   sendResponse(client, 200, "Value updated.");
 }
@@ -221,6 +238,8 @@ void handleAssignMotor(WiFiClient& client, int id, int pin) {
 
   pinMode(pin, OUTPUT);
   motorPins[id] = pin;
+  servoMotors[id].attach(pin);
+  motorValues[id] = 0;
   sendResponse(client, 200, "Assigned motor to room " + String(id) + " at pin " + String(pin));
 }
 
@@ -264,16 +283,8 @@ void handleAssignMotion(WiFiClient& client, int id, int pin) {
   sendResponse(client, 200, "Assigned motion sensor to room " + String(id) + " at pin " + String(pin));
 }
 
-void handleLedSetValue(int id, int value){
-    ledValues[id] = value;
-}
-
-void handleMotorSetValue(int id, int value){
-  motorValues[id] = value;
-}
-
 void handleModeSetValue(int id, int value){
-  mode[i] = value;
+  mode[id] = value;
 }
 
 //  ====== Sensor Handlers ======
@@ -298,17 +309,17 @@ void checkLDR(int id) {
   if (mode[id] != 1 || ldrPins[id] == -1) return;
 
   int ldrVal = analogRead(ldrPins[id]);
-  ldrValues[id] = ldrVal;
 
-  if (abs(ldrVal - lastLdrValue[id]) > 500) {
-    lastLdrValue[id] = ldrVal;
+  if (abs(ldrVal - ldrValues[id]) > 500) {
     notifyBackend("ldr", id, ldrVal);
   }
 
+  ldrValues[id] = ldrVal;
+
   if (ldrVal < 1000 && motorValues[id] != 0) {
-    rotateMotor(id, 0, 30000, false);
+    rotateMotor(id, 0);
   } else if (ldrVal > 3000 && motorValues[id] != 100) {
-    rotateMotor(id, 100, 30000, true);
+    rotateMotor(id, 100);
   }
 }
 
@@ -319,17 +330,16 @@ void checkTempHumidity(int id) {
   if (isnan(temp)) return;
 
   int intTemp = (int)temp;
-  if (abs(intTemp - lastTempValue[id]) >= 5) {
-    lastTempValue[id] = intTemp;
+  if (abs(intTemp - dhtValues[id]) >= 3) {
     notifyBackend("temperature", id, intTemp);
   }
 
   dhtValues[id] = intTemp;
 
-  if (temp > 30) {
-    handleMotorSetValue(id, 100);
-    handleLedSetValue(id, 60);
-    analogWrite(ledPins[id], 153);
+  if (temp > 30 && motorValues[id] != 100) {
+    rotateMotor(id, 100);
+    if(ledValues[id] == 0)
+      switchLed(id, 70);
   }
 }
 
@@ -338,20 +348,52 @@ void checkMotion(int id) {
 
   int motion = digitalRead(motionPins[id]);
 
-  if (motion == HIGH && !lastMotionState[id]) {
-    lastMotionState[id] = true;
+  if (motion == HIGH && !motionValues[id]) {
+    motionValues[id] = true;
     notifyBackend("motion", id, 1);
-  } else if (motion == LOW && lastMotionState[id]) {
-    lastMotionState[id] = false;
+    switchLed(id, 100);
+    delay(duration);
+    switchLed(id, 0);
+  } else if (motion == LOW && motionValues[id]) {
+    motionValues[id] = false;
   }
 }
 
-void rotateMotor(int id, int value, unsigned long duration, bool direction) {
-  handleMotorSetValue(id, value);
-  if (motorPins[id] != -1) {
-    digitalWrite(motorPins[id], direction ? HIGH : LOW);  // You can refine based on motor driver
+void rotateMotor(int id, int value) {
+  if (motorPins[id] == -1 || value < 0 || value > 100)
+    return;
+
+  if (value == motorValues[id])
+    return;
+
+  if (!servoMotors[id].attached()) {
+    servoMotors[id].attach(motorPins[id]);
   }
-  millis(duration * (100/value));
-  handleMotorSetValue(id, value);  // maintain state
-  digitalWrite(motorPins[id], LOW);  // stop motor
+
+  // Determine direction and rotation time
+  bool clockwise = value > motorValues[id];
+  int diff = abs(value - motorValues[id]);
+  unsigned long rotateTime = duration * diff / 100;
+
+  // Rotate servo
+  servoMotors[id].write(clockwise ? 180 : 0);
+  delay(rotateTime);
+
+  // Stop servo
+  servoMotors[id].write(90);
+
+  // Update state
+  motorValues[id] = value;
+}
+
+void switchLed(int id, int value) {
+  if (ledPins[id] == -1)
+    return;
+
+  if (value < 0 || value > 100)
+    return;
+
+  int pwm = map(value, 0, 100, 0, 255);
+  analogWrite(ledPins[id], pwm);
+  ledValues[id] = value;
 }
