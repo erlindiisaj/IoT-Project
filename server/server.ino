@@ -61,6 +61,8 @@ void loop() {
       handlePutRequest(client, request);
     } else if (request.startsWith("POST")) {
       handlePostRequest(client, request);
+    } else if (request.startsWith("DELETE")) {
+      handleDeleteRequest(client, request);
     } else {
       sendResponse(client, 405, "error", "Method not allowed.");
     }
@@ -133,7 +135,7 @@ void handlePutRequest(WiFiClient& client, const String& request) {
     if(val != 0 && val != 1){
       sendResponse(client, 400, "error", "Invalid value.");
       return;
-    }
+  }
 
     mode[id] = val;
   } else {
@@ -158,6 +160,10 @@ void handleGetRequest(WiFiClient& client, const String& request) {
     value = ledValues[id];
   } else if (request.indexOf("/motor") >= 0) {
     value = motorValues[id];
+  } else if (request.indexOf("/ldr") >= 0) {
+    value = ldrValues[id];
+  } else if (request.indexOf("/dht") >= 0) {
+    value = dhtValues[id];
   } else if (request.indexOf("/mode") >= 0) {
     value = mode[id];
   } 
@@ -168,6 +174,44 @@ void handleGetRequest(WiFiClient& client, const String& request) {
   }
       
   sendResponse(client, 200, "value", String(value));
+}
+
+void handleDeleteRequest(WiFiClient& client, const String& request) {
+  int id = extractParam(request, "id");
+
+  if (id < 0 || id >= ROOMS) {
+    sendResponse(client, 400, "error", "Invalid room id.");
+    return;
+  }
+
+  if (request.indexOf("/led") >= 0) {
+    ledPins[id] = -1;
+    ledValues[id] = 0;
+  } else if (request.indexOf("/motor") >= 0) {
+    motorPins[id] = -1;
+    motorValues[id] = 0;
+    if (servoMotors[id].attached()) {
+      servoMotors[id].detach();  // Detach servo to release control
+    }
+  } else if (request.indexOf("/ldr") >= 0) {
+    ldrPins[id] = -1;
+    ldrValues[id] = 0;
+  } else if (request.indexOf("/dth") >= 0) {
+    dhtPins[id] = -1;
+    dhtValues[id] = -100;
+    if (dht_arr[id] != nullptr) {
+        delete dht_arr[id];      // Free the memory
+        dht_arr[id] = nullptr;   // Prevent dangling pointer
+    }
+  } else if (request.indexOf("/pir") >= 0) {
+    motionPins[id] = -1;
+    motionValues[id] = false;
+  } else {
+    sendResponse(client, 400, "error", "Endpoint not found.");
+    return;
+  }
+      
+  sendResponse(client, 200, "success", "true");
 }
 
 int extractParam(const String& req, const String& key) {
@@ -205,7 +249,6 @@ void sendResponse(WiFiClient& client, int code, const String& jsonPayload) {
 
   client.println(jsonPayload); // Must be valid JSON
 }
-
 
 // ====== API Endpoint Handlers ======
 
@@ -259,7 +302,7 @@ void handleAssignLed(WiFiClient& client, int id, int pin) {
 
 void handleAssignMotor(WiFiClient& client, int id, int pin) {
   if (pin != 9 && pin != 10 && pin != 11) {
-    sendResponse(client, 400, "Invalid pin. Motor allowed only on pins 9, 10, 11.");
+    sendResponse(client, 400, "error", "Invalid pin. Motor allowed only on pins 9, 10, 11.");
     return;
   }
 
@@ -273,7 +316,7 @@ void handleAssignMotor(WiFiClient& client, int id, int pin) {
 
 void handleAssignDht(WiFiClient& client, int id, int pin) {
   if (pin != 7 && pin != 8 && pin != 16) {
-    sendResponse(client, 400, "Invalid pin. DHT allowed only on pins 7, 8, 16.");
+    sendResponse(client, 400, "error", "Invalid pin. DHT allowed only on pins 7, 8, 16.");
     return;
   }
 
@@ -291,7 +334,7 @@ void handleAssignDht(WiFiClient& client, int id, int pin) {
 
 void handleAssignLDR(WiFiClient& client, int id, int pin) {
   if (pin != 14 && pin != 15 && pin != 17) {
-    sendResponse(client, 400, "Invalid pin. LDR allowed only on pins 14, 15, 17.");
+    sendResponse(client, 400, "error", "Invalid pin. LDR allowed only on pins 14, 15, 17.");
     return;
   }
 
@@ -303,7 +346,7 @@ void handleAssignLDR(WiFiClient& client, int id, int pin) {
 
 void handleAssignMotion(WiFiClient& client, int id, int pin) {
   if (pin != 2 && pin != 4 && pin != 12) {
-    sendResponse(client, 400, "Invalid pin. PIR allowed only on pins 2, 4, 12.");
+    sendResponse(client, 400, "error", "Invalid pin. PIR allowed only on pins 2, 4, 12.");
     return;
   }
 
@@ -397,10 +440,6 @@ void rotateMotor(int id, int value) {
 
   if (value == motorValues[id])
     return;
-
-  if (!servoMotors[id].attached()) {
-    servoMotors[id].attach(motorPins[id]);
-  }
 
   // Determine direction and rotation time
   bool clockwise = value > motorValues[id];

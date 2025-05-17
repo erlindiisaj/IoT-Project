@@ -2,31 +2,31 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Mode(models.TextChoices):
-    AUTO = 'AUTO', 'auto'
-    MANUAL = 'MANUAL', 'manual'
-    SCHEDULE = 'SCHEDULE', 'schedule'
+    AUTO = 'auto', 'auto'
+    MANUAL = 'manual', 'manual'
+    BACKEND = 'backend', 'backend'
 
 class Action(models.TextChoices):
-    ON = 'ON', 'on'
-    OFF = 'OFF', 'off'
-    TOGGLE = 'TOGGLE', 'toggle'
-    READ = 'READ', 'read' # This action is used to read the state of a component
+    ON = 'on', 'on'
+    OFF = 'off', 'off'
+    TOGGLE = 'toggle', 'toggle'
+    READ = 'read', 'read'
 
 class Type(models.TextChoices):
-    LED = 'LED', 'led'
-    MOTOR = 'MOTOR', 'motor'
-    DTH = 'DTH', 'dth'
-    LDR = 'LDR', 'ldr'
-    PIR = 'PIR', 'pir'
-
-class APIPoints(models.TextChoices):
     LED = 'led', 'led'
     MOTOR = 'motor', 'motor'
     DTH = 'dth', 'dth'
     LDR = 'ldr', 'ldr'
     PIR = 'pir', 'pir'
-    mode = 'mode', 'mode'
 
+class ApiType(models.TextChoices):
+    LED = 'led', 'led'
+    MOTOR = 'motor', 'motor'
+    DTH = 'dth', 'dth'
+    LDR = 'ldr', 'ldr'
+    PIR = 'pir', 'pir'
+    MODE = 'mode', 'mode'
+    
 # Create your models here.
 class Room(models.Model):
     id = models.AutoField(primary_key=True)
@@ -43,14 +43,13 @@ class Component(models.Model):
     id = models.AutoField(primary_key=True)
     type = models.CharField(
         max_length=50,
-        choices=Type.choices,
-        default=Type.LED
+        choices=Type.choices
         )
     pin = models.IntegerField(unique=True, validators=[
             MinValueValidator(1),   # Minimum value
-            MaxValueValidator(100)  # Maximum value
+            MaxValueValidator(20)  # Maximum value
         ])
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='components')
+    room = models.ForeignKey(Room, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.get_type_display()} on pin {self.pin} in {self.room.name}"
@@ -74,24 +73,3 @@ class ComponentData(models.Model):
 
     def __str__(self):
         return f"{self.component} - {self.get_action_display()} at {self.timestamp}"
-    
-
-class ArduinoModel(models.Model):
-    type = models.CharField(
-        max_length=50,
-        choices=APIPoints.choices,
-        default=APIPoints.LED
-        )
-    room_id = models.IntegerField(validators=
-        [
-            MinValueValidator(1),   
-            MaxValueValidator(3) 
-        ]
-    )
-    pin = models.IntegerField()
-    value = models.IntegerField(validators=
-        [
-            MinValueValidator(0),   
-            MaxValueValidator(100) 
-        ]
-    )

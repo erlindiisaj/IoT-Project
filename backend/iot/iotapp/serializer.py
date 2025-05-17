@@ -1,5 +1,15 @@
 from rest_framework import serializers
-from .models import Room, Component, ComponentData, ArduinoModel
+from django.core.validators import MinValueValidator, MaxValueValidator
+from .models import Room, Component, ComponentData, ApiType, Mode, Action
+
+# Define the valid pins
+PIN_MAP = {
+    'led': [3, 5, 6],
+    'motor': [9, 10, 11],
+    'dth': [7, 8, 16],
+    'ldr': [14, 15, 17],
+    'pir': [2, 4, 12]
+}
 
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,6 +22,19 @@ class ComponentSerializer(serializers.ModelSerializer):
         model = Component
         fields = ['id', 'type', 'pin','room']
         read_only_fields = ['id']
+    
+    def validate(self, data):
+        component_type = data.get('type')
+        pin = data.get('pin')
+
+        if component_type in PIN_MAP:
+            allowed_pins = PIN_MAP[component_type]
+            if allowed_pins and pin not in allowed_pins:
+                raise serializers.ValidationError({
+                    'pin': f"Pin {pin} is not allowed for type '{component_type}'. Allowed pins: {allowed_pins}"
+                })
+
+        return data
 
 class ComponentDataSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,13 +42,39 @@ class ComponentDataSerializer(serializers.ModelSerializer):
         fields = ['id', 'component', 'mode', 'action', 'timestamp', 'previous_value', 'current_value']
         read_only_fields = ['id']
 
+class EventDataSerializer(serializers.Serializer):
+    room_id = serializers.IntegerField(
+        validators=[
+            MinValueValidator(1, message='Room ID must be at least 1.'),
+            MaxValueValidator(3, message='Room ID must be at most 3.')
+        ]
+    )
+    
+    type = serializers.ChoiceField(
+        choices=ApiType.choices,
+        error_messages={'invalid_choice': 'Invalid type choice.'}
+    )
 
-class ArduinoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ArduinoModel
-        fields = ['room_id', 'type', 'pin']
+    action = serializers.ChoiceField(
+        choices=Action.choices,
+        error_messages={'invalid_choice': 'Invalid action choice.'}
+    )
 
-class ArduinoSerializerPut(serializers.ModelSerializer):
-    class Meta:
-        model = ArduinoModel
-        fields = ['room_id', 'type', 'value']
+    mode = serializers.ChoiceField(
+        choices=Mode.choices,
+        error_messages={'invalid_choice': 'Invalid mode choice.'}
+    )
+
+    previous_value = serializers.IntegerField(
+        validators=[
+            MinValueValidator(0, message='Previous value must be at least 0.'),
+            MaxValueValidator(100, message='Previous value must be at most 100.')
+        ]
+    )
+
+    current_value = serializers.IntegerField(
+        validators=[
+            MinValueValidator(0, message='Current value must be at least 0.'),
+            MaxValueValidator(100, message='Current value must be at most 100.')
+        ]
+    )
