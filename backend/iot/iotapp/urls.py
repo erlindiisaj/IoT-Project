@@ -12,4 +12,6 @@ urlpatterns = [
     
     path('components/data/<int:component_id>/', views.ComponentDataView.as_view(), name='component_data'), # For GET, DELETE
     path('components/data/', views.ComponentDataView.as_view(), name='component_data'), # For Post
+
+    path('sensors/', views.ArduinoView.as_view(), name='sensors'), # For GET
 ]

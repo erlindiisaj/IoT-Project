@@ -123,7 +123,7 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
+'''
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -134,9 +134,17 @@ REST_FRAMEWORK = {
     ),
     'EXCEPTION_HANDLER': 'iot.handlers.custom_exception_handler',
 }
+'''
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',  # This allows anonymous access by default
+    ],
+    'EXCEPTION_HANDLER': 'iot.handlers.custom_exception_handler',
+}
 
 # DB settings
-ARDUINO_IP = '192.168.0.102'
+ARDUINO_IP = '192.168.1.106'
 MAXIMUM_ROOMS = 3
 MAXIMUM_COMPONENT_PER_TYPE = 3
 

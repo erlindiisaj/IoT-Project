@@ -62,7 +62,7 @@ void loop() {
     } else if (request.startsWith("POST")) {
       handlePostRequest(client, request);
     } else {
-      sendResponse(client, 405, "Method not allowed.");
+      sendResponse(client, 405, "error", "Method not allowed.");
     }
 
     delay(1);
@@ -92,7 +92,7 @@ void handlePostRequest(WiFiClient& client, const String& request) {
   int pin = extractParam(request, "pin");
 
   if (id < 0 || id >= ROOMS) {
-    sendResponse(client, 400, "Invalid room id.");
+    sendResponse(client, 400, "error", "Invalid room id.");
     return;
   }
 
@@ -107,7 +107,7 @@ void handlePostRequest(WiFiClient& client, const String& request) {
   } else if (request.indexOf("/pir") >= 0) {
     handleAssignMotion(client, id, pin);
   } else {
-    sendResponse(client, 404, "Invalid POST endpoint.");
+    sendResponse(client, 404," error", "Invalid POST endpoint.");
   }
 }
 
@@ -116,12 +116,12 @@ void handlePutRequest(WiFiClient& client, const String& request) {
   int val = extractParam(request, "val");
 
   if (id < 0 || id >= ROOMS) {
-    sendResponse(client, 400, "Invalid room id.");
+    sendResponse(client, 400, "error", "Invalid room id.");
     return;
   }
 
   if (val < 0 || val > 100) {
-    sendResponse(client, 400, "Invalid value.");
+    sendResponse(client, 400, "error", "Invalid value.");
     return;
   }
 
@@ -131,24 +131,24 @@ void handlePutRequest(WiFiClient& client, const String& request) {
     rotateMotor(id, val);
   } else if (request.indexOf("/mode") >= 0){
     if(val != 0 && val != 1){
-      sendResponse(client, 400, "Invalid value.");
+      sendResponse(client, 400, "error", "Invalid value.");
       return;
     }
 
     mode[id] = val;
   } else {
-    sendResponse(client, 404, "Invalid POST endpoint.");
+    sendResponse(client, 404, "error", "Invalid POST endpoint.");
     return;
   }
 
-  sendResponse(client, 200, "Value updated.");
+  sendResponse(client, 200, "message", "Value updated.");
 }
 
 void handleGetRequest(WiFiClient& client, const String& request) {
   int id = extractParam(request, "id");
 
   if (id < 0 || id >= ROOMS) {
-    sendResponse(client, 400, "Invalid room id.");
+    sendResponse(client, 400, "error", "Invalid room id.");
     return;
   }
 
@@ -163,11 +163,11 @@ void handleGetRequest(WiFiClient& client, const String& request) {
   } 
   
   if (value == -1) {
-    sendResponse(client, 404, "Not initialized.");
+    sendResponse(client, 404, "error", "Not initialized.");
     return;
   }
       
-  sendResponse(client, 200, String(value));
+  sendResponse(client, 200, "value", String(value));
 }
 
 int extractParam(const String& req, const String& key) {
@@ -182,38 +182,64 @@ int extractParam(const String& req, const String& key) {
   return -1;
 }
 
-void sendResponse(WiFiClient& client, int code, const String& message) {
+void sendResponse(WiFiClient& client, int code, const String& key, const String& value) {
   client.print("HTTP/1.1 ");
   client.print(code);
   client.println(code == 200 ? " OK" : " Error");
-  client.println("Content-Type: text/plain");
+  client.println("Content-Type: application/json");
   client.println("Connection: close");
   client.println();
-  client.println(message);
+
+  // Create a JSON-like response string
+  String json = "{ \"" + key + "\": \"" + value + "\" }";
+  client.println(json);
 }
+
+void sendResponse(WiFiClient& client, int code, const String& jsonPayload) {
+  client.print("HTTP/1.1 ");
+  client.print(code);
+  client.println(code == 200 ? " OK" : " Error");
+  client.println("Content-Type: application/json");
+  client.println("Connection: close");
+  client.println();
+
+  client.println(jsonPayload); // Must be valid JSON
+}
+
 
 // ====== API Endpoint Handlers ======
 
-void notifyBackend(const String& type, int id, int value) {
+void notifyBackend(const String& type, int id, const String& action, int prevValue, int value) {
   WiFiClient client;
-  const char* host = "yourserver.com";  // Replace with your backend host
+  const char* host = "192.168.1.104";  // Replace with your backend host
 
   if (client.connect(host, 80)) {
-    String payload = "type=" + type + "&room=" + String(id) + "&value=" + String(value);
+    // Build the JSON payload
+    String payload = "{";
+    payload += "\"room_id\": " + String(id) + ",";
+    payload += "\"type\": " + type + ",";
+    payload += "\"action\": \"" + action + "\",";
+    payload += "\"mode\": \"auto\",";
+    payload += "\"prev_value\": " + String(prevValue) + ",";
+    payload += "\"value\": " + String(value);
+    payload += "}";
 
+    // Send HTTP POST request
     client.println("POST /event HTTP/1.1");
     client.println("Host: " + String(host));
-    client.println("Content-Type: application/x-www-form-urlencoded");
+    client.println("Content-Type: application/json");
     client.println("Content-Length: " + String(payload.length()));
     client.println();
     client.print(payload);
 
-    delay(10);  // allow some time
+    delay(10);  // Allow time for server to process
+
     while (client.available()) {
-      client.read();  // Optional: parse response
+      client.read();  // Optionally handle response
     }
 
     client.stop();
+    
   } else {
     Serial.println("Connection to backend failed.");
   }
@@ -221,13 +247,14 @@ void notifyBackend(const String& type, int id, int value) {
 
 void handleAssignLed(WiFiClient& client, int id, int pin) {
   if (pin != 3 && pin != 5 && pin != 6) {
-    sendResponse(client, 400, "Invalid pin. LED allowed only on pins 3, 5, 6.");
+    sendResponse(client, 400, "error", "Invalid pin. LED allowed only on pins 3, 5, 6.");
     return;
   }
 
   pinMode(pin, OUTPUT);
   ledPins[id] = pin;
-  sendResponse(client, 200, "Assigned LED to room " + String(id) + " at pin " + String(pin));
+
+  sendResponse(client, 200, "success", "true");
 }
 
 void handleAssignMotor(WiFiClient& client, int id, int pin) {
@@ -240,7 +267,8 @@ void handleAssignMotor(WiFiClient& client, int id, int pin) {
   motorPins[id] = pin;
   servoMotors[id].attach(pin);
   motorValues[id] = 0;
-  sendResponse(client, 200, "Assigned motor to room " + String(id) + " at pin " + String(pin));
+
+  sendResponse(client, 200, "success", "true");
 }
 
 void handleAssignDht(WiFiClient& client, int id, int pin) {
@@ -258,7 +286,7 @@ void handleAssignDht(WiFiClient& client, int id, int pin) {
   dht_arr[id]->begin();
   dhtPins[id] = pin;
 
-  sendResponse(client, 200, "Assigned DHT to room " + String(id) + " at pin " + String(pin));
+  sendResponse(client, 200, "success", "true");
 }
 
 void handleAssignLDR(WiFiClient& client, int id, int pin) {
@@ -269,7 +297,8 @@ void handleAssignLDR(WiFiClient& client, int id, int pin) {
 
   pinMode(pin, INPUT);
   ldrPins[id] = pin;
-  sendResponse(client, 200, "Assigned LDR to room " + String(id) + " at pin " + String(pin));
+
+  sendResponse(client, 200, "success", "true");
 }
 
 void handleAssignMotion(WiFiClient& client, int id, int pin) {
@@ -280,11 +309,8 @@ void handleAssignMotion(WiFiClient& client, int id, int pin) {
 
   pinMode(pin, INPUT);
   motionPins[id] = pin;
-  sendResponse(client, 200, "Assigned motion sensor to room " + String(id) + " at pin " + String(pin));
-}
 
-void handleModeSetValue(int id, int value){
-  mode[id] = value;
+  sendResponse(client, 200, "success", "true");
 }
 
 //  ====== Sensor Handlers ======
@@ -311,15 +337,17 @@ void checkLDR(int id) {
   int ldrVal = analogRead(ldrPins[id]);
 
   if (abs(ldrVal - ldrValues[id]) > 500) {
-    notifyBackend("ldr", id, ldrVal);
+    notifyBackend("ldr", id, "read", ldrValues[id], ldrVal);
   }
 
   ldrValues[id] = ldrVal;
 
   if (ldrVal < 1000 && motorValues[id] != 0) {
     rotateMotor(id, 0);
+    notifyBackend("motor", id, "off", motorValues[id], 0);
   } else if (ldrVal > 3000 && motorValues[id] != 100) {
     rotateMotor(id, 100);
+    notifyBackend("motor", id, "on", motorValues[id], 100);
   }
 }
 
@@ -331,15 +359,18 @@ void checkTempHumidity(int id) {
 
   int intTemp = (int)temp;
   if (abs(intTemp - dhtValues[id]) >= 3) {
-    notifyBackend("temperature", id, intTemp);
+    notifyBackend("dth", id, "read", dhtValues[id], intTemp);
   }
 
   dhtValues[id] = intTemp;
 
   if (temp > 30 && motorValues[id] != 100) {
     rotateMotor(id, 100);
-    if(ledValues[id] == 0)
+    notifyBackend("motor", id, "on", motorValues[id], 100);
+    if(ledValues[id] == 0){
       switchLed(id, 70);
+      notifyBackend("led", id, "toggle", 0, 100);
+    }
   }
 }
 
@@ -350,11 +381,12 @@ void checkMotion(int id) {
 
   if (motion == HIGH && !motionValues[id]) {
     motionValues[id] = true;
-    notifyBackend("motion", id, 1);
+    notifyBackend("pir", id, "on", 0, 1);
     switchLed(id, 100);
     delay(duration);
     switchLed(id, 0);
   } else if (motion == LOW && motionValues[id]) {
+    notifyBackend("pir", id, "off", 1, 0);
     motionValues[id] = false;
   }
 }

@@ -1,17 +1,20 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, AllowAny
-from .models import Room, Component, ComponentData
-from .serializer import RoomSerializer, ComponentSerializer, ComponentDataSerializer
+# from rest_framework.permissions import IsAdminUser, AllowAny
+from .models import Room, Component, ComponentData, ArduinoModel
+from .serializer import RoomSerializer, ComponentSerializer, ComponentDataSerializer, ArduinoSerializer, ArduinoSerializerPut
 from django.shortcuts import get_object_or_404
-from iot.settings import MAXIMUM_ROOMS, MAXIMUM_COMPONENT_PER_TYPE
+from iot.settings import MAXIMUM_ROOMS, MAXIMUM_COMPONENT_PER_TYPE, ARDUINO_IP
+import requests
 
 # Create your views here.
 class RoomView(APIView):
+    '''
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
         return [IsAdminUser()]
+    '''
     
     def get(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
@@ -46,10 +49,12 @@ class RoomsView(APIView):
         return Response(serializer.data, status=200)
     
 class ComponentView(APIView):
+    '''
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
         return [IsAdminUser()]
+    '''
 
     def get(self, request, component_id):
         component = get_object_or_404(Component, id=component_id)
@@ -89,10 +94,12 @@ class ComponentsView(APIView):
         return Response(serializer.data, status=200)
     
 class ComponentDataView(APIView):
+    '''
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
         return [IsAdminUser()]
+    '''
 
     def get(self, request, id):
         data = get_object_or_404(ComponentData, id=id)
@@ -111,3 +118,63 @@ class ComponentDataView(APIView):
         component_data = ComponentData.objects.get(id=component_data_id)
         component_data.delete()
         return Response({"message": f"Component data with '{component_data.id}' deleted successfully"}, status=200)
+    
+class ArduinoView(APIView):
+    def get(self, request):
+        serializer = ArduinoSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=400)
+        
+        response = requests.get(f'http://{ARDUINO_IP}/{serializer.validated_data["type"]}?id={serializer.validated_data["room_id"]}&pin={serializer.validated_data["pin"]}')
+    
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                # save to db
+                return Response(data)
+            except ValueError:
+                return Response({"error": "Invalid JSON from Arduino"}, status=500)
+        return Response({"error": "Failed to update Arduino"}, status=500)
+
+    
+    def post(self, request):
+        serializer = ArduinoSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=400)
+        
+        response = requests.post(f'http://{ARDUINO_IP}/{serializer.validated_data["type"]}?id={serializer.validated_data["room_id"]}&pin={serializer.validated_data["pin"]}'
+)
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                return Response(data)
+                # save to db
+            except ValueError:
+                return Response({"error": "Invalid JSON from Arduino"}, status=500)
+        return Response(response.json(), status=response.status_code)
+       
+        
+    def put(self, request):
+        serializer = ArduinoSerializerPut(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=400)
+        
+        response = requests.put(f'http://{ARDUINO_IP}/{serializer.validated_data["type"]}?id={serializer.validated_data["room_id"]}&val={serializer.validated_data["value"]}')
+    
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                # save to db
+                return Response(data)
+            except ValueError:
+                return Response({"error": "Invalid JSON from Arduino"}, status=500)
+
+        return Response({"error": "Failed to update Arduino"}, status=500)
+
+class EventView(APIView):
+    def post(self, request):
+        print(request.data)
+        return Response({"message": "Event received"}, status=200)
+

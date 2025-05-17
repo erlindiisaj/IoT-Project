@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Room, Component, ComponentData
+from .models import Room, Component, ComponentData, ArduinoModel
 
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,3 +18,14 @@ class ComponentDataSerializer(serializers.ModelSerializer):
         model = ComponentData
         fields = ['id', 'component', 'mode', 'action', 'timestamp', 'previous_value', 'current_value']
         read_only_fields = ['id']
+
+
+class ArduinoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArduinoModel
+        fields = ['room_id', 'type', 'pin']
+
+class ArduinoSerializerPut(serializers.ModelSerializer):
+    class Meta:
+        model = ArduinoModel
+        fields = ['room_id', 'type', 'value']
