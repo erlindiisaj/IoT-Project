@@ -7,24 +7,12 @@ import {
 import { APIClient } from "src/apiClient";
 import type { IRoom, createRoomDTO } from "@interfaces/IRoom";
 
-import { _rooms } from "src/_mock";
-
 export const useRoom = () => {
   const queryClient = useQueryClient();
-  const apiClient = new APIClient<IRoom>("rooms");
+  const apiClient = new APIClient<IRoom>("rooms/get/all");
 
   const getRooms = useSuspenseQuery<IRoom[], Error>({
     queryFn: () => apiClient.getAll(),
-    queryKey: ["ROOM_API_KEY"],
-  });
-
-  const getRoomsTest = useSuspenseQuery<IRoom[], Error>({
-    queryFn: () =>
-      new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(_rooms);
-        }, 2000);
-      }),
     queryKey: ["ROOM_API_KEY"],
   });
 
@@ -37,7 +25,6 @@ export const useRoom = () => {
   });
 
   return {
-    getRoomsTest,
     getRooms,
     createRoom,
   };

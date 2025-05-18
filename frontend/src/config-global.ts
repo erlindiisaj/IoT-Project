@@ -10,6 +10,6 @@ export const CONFIG: ConfigValues = {
   appVersion: packageJson.version,
 };
 
-export const API_URL = "http://localhost:8000";
+export const API_URL = "http://192.168.1.104:80/";
 
 export const WEBSOCKET_URL = "ws://192.168.1.104:80/ws/component-data/";
