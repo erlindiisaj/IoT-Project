@@ -6,7 +6,7 @@ from .models import Room, Component, ComponentData, ApiType, Mode, Action
 PIN_MAP = {
     'led': [3, 5, 6],
     'motor': [9, 10, 11],
-    'dth': [7, 8, 16],
+    'dht': [7, 8, 16],
     'ldr': [14, 15, 17],
     'pir': [2, 4, 12]
 }
@@ -14,13 +14,13 @@ PIN_MAP = {
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
-        fields = ['id', 'name', 'arduiono_id']
+        fields = "__all__"
         read_only_fields = ['id']
 
 class ComponentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Component
-        fields = ['id', 'type', 'pin','room']
+        fields = "__all__"
         read_only_fields = ['id']
     
     def validate(self, data):
@@ -39,7 +39,7 @@ class ComponentSerializer(serializers.ModelSerializer):
 class ComponentDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = ComponentData
-        fields = ['id', 'component', 'mode', 'action', 'timestamp', 'previous_value', 'current_value']
+        fields = "__all__"
         read_only_fields = ['id']
 
 class EventDataSerializer(serializers.Serializer):
@@ -65,16 +65,6 @@ class EventDataSerializer(serializers.Serializer):
         error_messages={'invalid_choice': 'Invalid mode choice.'}
     )
 
-    previous_value = serializers.IntegerField(
-        validators=[
-            MinValueValidator(0, message='Previous value must be at least 0.'),
-            MaxValueValidator(100, message='Previous value must be at most 100.')
-        ]
-    )
+    previous_value = serializers.IntegerField()
 
-    current_value = serializers.IntegerField(
-        validators=[
-            MinValueValidator(0, message='Current value must be at least 0.'),
-            MaxValueValidator(100, message='Current value must be at most 100.')
-        ]
-    )
+    current_value = serializers.IntegerField()

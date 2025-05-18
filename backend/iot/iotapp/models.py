@@ -15,14 +15,14 @@ class Action(models.TextChoices):
 class Type(models.TextChoices):
     LED = 'led', 'led'
     MOTOR = 'motor', 'motor'
-    DTH = 'dth', 'dth'
+    DHT = 'dht', 'dht'
     LDR = 'ldr', 'ldr'
     PIR = 'pir', 'pir'
 
 class ApiType(models.TextChoices):
     LED = 'led', 'led'
     MOTOR = 'motor', 'motor'
-    DTH = 'dth', 'dth'
+    DHT = 'dht', 'dht'
     LDR = 'ldr', 'ldr'
     PIR = 'pir', 'pir'
     MODE = 'mode', 'mode'

@@ -47,6 +47,12 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   server.begin();
+
+  String payload = "{";
+    payload += "\"power\": \"on\"";
+    payload += "}";
+
+  notifyBackend(payload, "server");
 }
 
 void loop() {
@@ -71,6 +77,8 @@ void loop() {
     client.stop();
     Serial.println("Client disconnected");
   }
+
+  delay(100);
 
   checkSensors();
 }
@@ -252,23 +260,28 @@ void sendResponse(WiFiClient& client, int code, const String& jsonPayload) {
 
 // ====== API Endpoint Handlers ======
 
-void notifyBackend(const String& type, int id, const String& action, int prevValue, int value) {
+String createPayload(const String& type, int id, const String& action, int prevValue, int value){
+    String payload = "{";
+    payload += "\"room_id\": " + String(id) + ",";
+    payload += "\"type\": \"" + type + "\",";
+    payload += "\"action\": \"" + action + "\",";
+    payload += "\"mode\": \"auto\",";
+    payload += "\"previous_value\": " + String(prevValue) + ",";
+    payload += "\"current_value\": " + String(value);
+    payload += "}";
+
+    return payload;
+}
+
+void notifyBackend(const String& payload, const String& apiPoint) {
   WiFiClient client;
-  const char* host = "192.168.1.104";  // Replace with your backend host
+  const char* host = "192.168.1.102";  // Replace with your backend host
 
   if (client.connect(host, 80)) {
     // Build the JSON payload
-    String payload = "{";
-    payload += "\"room_id\": " + String(id) + ",";
-    payload += "\"type\": " + type + ",";
-    payload += "\"action\": \"" + action + "\",";
-    payload += "\"mode\": \"auto\",";
-    payload += "\"prev_value\": " + String(prevValue) + ",";
-    payload += "\"value\": " + String(value);
-    payload += "}";
 
     // Send HTTP POST request
-    client.println("POST /event HTTP/1.1");
+    client.println("POST /" + apiPoint + "HTTP/1.1");
     client.println("Host: " + String(host));
     client.println("Content-Type: application/json");
     client.println("Content-Length: " + String(payload.length()));
@@ -380,17 +393,17 @@ void checkLDR(int id) {
   int ldrVal = analogRead(ldrPins[id]);
 
   if (abs(ldrVal - ldrValues[id]) > 500) {
-    notifyBackend("ldr", id, "read", ldrValues[id], ldrVal);
+    notifyBackend(createPayload("ldr", id, "read", ldrValues[id], ldrVal), "event");
   }
 
   ldrValues[id] = ldrVal;
 
   if (ldrVal < 1000 && motorValues[id] != 0) {
     rotateMotor(id, 0);
-    notifyBackend("motor", id, "off", motorValues[id], 0);
+    notifyBackend(createPayload("motor", id, "off", motorValues[id], 0), "event");
   } else if (ldrVal > 3000 && motorValues[id] != 100) {
     rotateMotor(id, 100);
-    notifyBackend("motor", id, "on", motorValues[id], 100);
+    notifyBackend(createPayload("motor", id, "on", motorValues[id], 100), "event");
   }
 }
 
@@ -402,17 +415,17 @@ void checkTempHumidity(int id) {
 
   int intTemp = (int)temp;
   if (abs(intTemp - dhtValues[id]) >= 3) {
-    notifyBackend("dth", id, "read", dhtValues[id], intTemp);
+    notifyBackend(createPayload("dth", id, "read", dhtValues[id], intTemp), "event");
   }
 
   dhtValues[id] = intTemp;
 
   if (temp > 30 && motorValues[id] != 100) {
     rotateMotor(id, 100);
-    notifyBackend("motor", id, "on", motorValues[id], 100);
+    notifyBackend(createPayload("motor", id, "on", motorValues[id], 100), "event");
     if(ledValues[id] == 0){
       switchLed(id, 70);
-      notifyBackend("led", id, "toggle", 0, 100);
+      notifyBackend(createPayload("led", id, "toggle", 0, 100), "event");
     }
   }
 }
@@ -424,12 +437,12 @@ void checkMotion(int id) {
 
   if (motion == HIGH && !motionValues[id]) {
     motionValues[id] = true;
-    notifyBackend("pir", id, "on", 0, 1);
+    notifyBackend(createPayload("pir", id, "on", 0, 1), "event");
     switchLed(id, 100);
     delay(duration);
     switchLed(id, 0);
   } else if (motion == LOW && motionValues[id]) {
-    notifyBackend("pir", id, "off", 1, 0);
+    notifyBackend(createPayload("pir", id, "off", 1, 0), "event");
     motionValues[id] = false;
   }
 }
