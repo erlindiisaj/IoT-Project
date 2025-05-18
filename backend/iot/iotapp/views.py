@@ -120,11 +120,11 @@ def get_component_value(request, component_id):
     return Response({"error": "Failed to get value from Arduino"}, status=response.status_code)
 
 @api_view(['POST'])
-def recreate_component(request):
+def recreate_components(request):
     if request.data.get('power') != 'on':
         return Response({"error": "Power is off"}, status=400)
     
-    components = Component.objects.get()
+    components = Component.objects.all()
     if not components:
         return Response({"error": "No components found"}, status=404)
     
@@ -209,6 +209,7 @@ def get_component_full_data(request, component_id):
 
 @api_view(['POST'])
 def create_component_data(request):
+    print(request.data)
     serializer = EventDataSerializer(data=request.data)
     if not serializer.is_valid():
         return Response({"error": serializer.errors}, status=400)

@@ -24,6 +24,8 @@ urlpatterns = [
     path('event', views.create_component_data, name='create_component_data'),
     path('data/delete/<int:data_id>/', views.delete_component_data, name='delete_component_data'),
 
+    path('server', views.recreate_components, name='recreate_components'),
+
     path("ws/rooms/", consumers.RoomConsumer.as_asgi()),
     path("ws/components/", consumers.ComponentConsumer.as_asgi()),
     path("ws/component-data/", consumers.ComponentDataConsumer.as_asgi()),

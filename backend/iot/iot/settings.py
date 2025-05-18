@@ -45,6 +45,13 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'iot.asgi.application'
 
+# settings.py (for development only)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    },
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

@@ -204,7 +204,7 @@ void handleDeleteRequest(WiFiClient& client, const String& request) {
   } else if (request.indexOf("/ldr") >= 0) {
     ldrPins[id] = -1;
     ldrValues[id] = 0;
-  } else if (request.indexOf("/dth") >= 0) {
+  } else if (request.indexOf("/dht") >= 0) {
     dhtPins[id] = -1;
     dhtValues[id] = -100;
     if (dht_arr[id] != nullptr) {
@@ -260,7 +260,7 @@ void sendResponse(WiFiClient& client, int code, const String& jsonPayload) {
 
 // ====== API Endpoint Handlers ======
 
-String createPayload(const String& type, int id, const String& action, int prevValue, int value){
+String createPayload(const String& type, int id, const String& action, int prevValue, int value) {
     String payload = "{";
     payload += "\"room_id\": " + String(id) + ",";
     payload += "\"type\": \"" + type + "\",";
@@ -275,13 +275,13 @@ String createPayload(const String& type, int id, const String& action, int prevV
 
 void notifyBackend(const String& payload, const String& apiPoint) {
   WiFiClient client;
-  const char* host = "192.168.1.102";  // Replace with your backend host
+  const char* host = "192.168.1.104";  // Replace with your backend host
 
   if (client.connect(host, 80)) {
     // Build the JSON payload
 
     // Send HTTP POST request
-    client.println("POST /" + apiPoint + "HTTP/1.1");
+    client.println("POST /" + apiPoint + " HTTP/1.1");
     client.println("Host: " + String(host));
     client.println("Content-Type: application/json");
     client.println("Content-Length: " + String(payload.length()));
@@ -289,6 +289,8 @@ void notifyBackend(const String& payload, const String& apiPoint) {
     client.print(payload);
 
     delay(10);  // Allow time for server to process
+    
+    Serial.println(payload);
 
     while (client.available()) {
       client.read();  // Optionally handle response
@@ -392,17 +394,17 @@ void checkLDR(int id) {
 
   int ldrVal = analogRead(ldrPins[id]);
 
-  if (abs(ldrVal - ldrValues[id]) > 500) {
+  if (abs(ldrVal - ldrValues[id]) > 100) {
     notifyBackend(createPayload("ldr", id, "read", ldrValues[id], ldrVal), "event");
   }
 
   ldrValues[id] = ldrVal;
 
-  if (ldrVal < 1000 && motorValues[id] != 0) {
-    rotateMotor(id, 0);
-    notifyBackend(createPayload("motor", id, "off", motorValues[id], 0), "event");
-  } else if (ldrVal > 3000 && motorValues[id] != 100) {
+  if (ldrVal < 500 && motorValues[id] != 100) {
     rotateMotor(id, 100);
+    notifyBackend(createPayload("motor", id, "off", motorValues[id], 0), "event");
+  } else if (ldrVal > 600 && motorValues[id] != 0) {
+    rotateMotor(id, 0);
     notifyBackend(createPayload("motor", id, "on", motorValues[id], 100), "event");
   }
 }
@@ -414,13 +416,13 @@ void checkTempHumidity(int id) {
   if (isnan(temp)) return;
 
   int intTemp = (int)temp;
-  if (abs(intTemp - dhtValues[id]) >= 3) {
-    notifyBackend(createPayload("dth", id, "read", dhtValues[id], intTemp), "event");
+  if (abs(intTemp - dhtValues[id]) >= 1) {
+    notifyBackend(createPayload("dht", id, "read", dhtValues[id], intTemp), "event");
   }
 
   dhtValues[id] = intTemp;
 
-  if (temp > 30 && motorValues[id] != 100) {
+  if (temp > 25 && motorValues[id] != 100) {
     rotateMotor(id, 100);
     notifyBackend(createPayload("motor", id, "on", motorValues[id], 100), "event");
     if(ledValues[id] == 0){

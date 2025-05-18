@@ -68,8 +68,8 @@ class ComponentData(models.Model):
         default=Mode.AUTO
         )
     timestamp = models.DateTimeField(auto_now_add=True)
-    previous_value = models.CharField(max_length=50, null=True, blank=True)
-    current_value = models.CharField(max_length=50, null=True, blank=True)
+    previous_value = models.IntegerField(null=True, blank=True)
+    current_value = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.component} - {self.get_action_display()} at {self.timestamp}"

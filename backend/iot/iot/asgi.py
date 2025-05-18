@@ -21,4 +21,5 @@ application = ProtocolTypeRouter({
     "websocket": URLRouter([
         iotapp.routing.websocket_urlpatterns
     ]),
+    
 })
