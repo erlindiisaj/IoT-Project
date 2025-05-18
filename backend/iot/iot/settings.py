@@ -24,8 +24,8 @@ SECRET_KEY = 'django-insecure-+cejy8md29z^k=3-56y)ptx65^#m4a(jpfjcej)-6oz#6exs48
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = ['192.168.1.104', '192.168.1.100']
+ARDUINO_IP = '192.168.1.106'
+ALLOWED_HOSTS = ['192.168.1.104', ARDUINO_IP ]
 
 
 # Application definition
@@ -50,7 +50,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 5173)],
+            "hosts": [("127.0.0.1", 6379)],
         },
     },
 }
@@ -157,6 +157,5 @@ REST_FRAMEWORK = {
 }
 
 # DB settings
-ARDUINO_IP = '192.168.1.100'
 MAXIMUM_ROOMS = 3
 MAXIMUM_COMPONENT_PER_TYPE = 3

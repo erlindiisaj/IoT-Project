@@ -24,6 +24,7 @@ export function useWebSocketWithReactQuery(queryKey: readonly unknown[]) {
     ws.current.onmessage = (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("WebSocket message received:", data);
 
         // Normalize data to an array of SensorReading objects
         const newReadings: SensorReading[] = Array.isArray(data)

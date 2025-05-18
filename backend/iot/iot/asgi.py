@@ -12,14 +12,12 @@ import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 
-from backend.iot import iotapp
+import iotapp.routing
+
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'iot.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    "websocket": URLRouter([
-        iotapp.routing.websocket_urlpatterns
-    ]),
-    
+    "websocket": URLRouter(iotapp.routing.websocket_urlpatterns)
 })

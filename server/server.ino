@@ -275,29 +275,27 @@ String createPayload(const String& type, int id, const String& action, int prevV
 
 void notifyBackend(const String& payload, const String& apiPoint) {
   WiFiClient client;
-  const char* host = "192.168.1.104";  // Replace with your backend host
+  const char* host = "192.168.1.104";
 
   if (client.connect(host, 80)) {
-    // Build the JSON payload
-
-    // Send HTTP POST request
     client.println("POST /" + apiPoint + " HTTP/1.1");
     client.println("Host: " + String(host));
     client.println("Content-Type: application/json");
     client.println("Content-Length: " + String(payload.length()));
-    client.println();
+    client.println("Connection: close");  // Important
+    client.println();  // End of headers
     client.print(payload);
 
-    delay(10);  // Allow time for server to process
-    
+    delay(200);  // Give time for request/response
+
+    Serial.println("Sent payload:");
     Serial.println(payload);
 
     while (client.available()) {
-      client.read();  // Optionally handle response
+      Serial.write(client.read());  // Show response
     }
 
     client.stop();
-    
   } else {
     Serial.println("Connection to backend failed.");
   }
