@@ -9,8 +9,8 @@ urlpatterns = [
     path('rooms/update/mode/<int:room_id>/', views.update_room_mode, name='update_room_mode'),
     path('rooms/delete/<int:room_id>/', views.delete_room, name='delete_room'),
 
-    path('componets/get/<int:component_id>/', views.get_component, name='component'),
-    path('componets/get/all/', views.get_components, name='all_components'),
+    path('components/get/<int:component_id>/', views.get_component, name='component'),
+    path('components/get/all/', views.get_components, name='all_components'),
     path('components/get/room/<int:room_id>/', views.get_components_by_room, name='components_by_room'),
     path('components/get/value/<int:component_id>/', views.get_component_value, name='component_value'),
     path('components/create/', views.create_component, name='create_component'),
