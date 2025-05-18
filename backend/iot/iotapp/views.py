@@ -100,6 +100,31 @@ def get_components_by_room(request, room_id):
     return Response(serializer.data)
 
 @api_view(['GET'])
+def get_room_components_values(request, room_id):
+    components = Component.objects.filter(room_id=room_id)
+    if not components:
+        return Response({"error": "No components found for this room"}, status=404)
+    
+    component_values = []
+    errors = []
+    for component in components:
+        response = requests.get(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}')
+        if response.status_code == 200:
+            try:
+                component_values.append({
+                    "component_id": component.id,
+                    "value": response.json().get('value', 0)
+                })
+            except ValueError:
+                errors.append({"component_id": component.id, "error": "Invalid JSON from Arduino"})
+    
+    if errors:
+        print(errors)
+        return Response({"error": "Failed to get some component values", "data": component_values}, status=500)
+
+    return Response(component_values)
+
+@api_view(['GET'])
 def get_component_value(request, component_id):
     component = get_object_or_404(Component, id=component_id)
     response = requests.get(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}')

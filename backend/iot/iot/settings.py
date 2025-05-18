@@ -25,7 +25,8 @@ SECRET_KEY = 'django-insecure-+cejy8md29z^k=3-56y)ptx65^#m4a(jpfjcej)-6oz#6exs48
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 ARDUINO_IP = '192.168.1.106'
-ALLOWED_HOSTS = ['192.168.1.104', ARDUINO_IP ]
+FRONTEND = '192.168.1.105'
+ALLOWED_HOSTS = ['192.168.1.104', ARDUINO_IP, FRONTEND ]
 
 
 # Application definition
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',  # CORS headers
     'channels',
     'rest_framework',  # Django REST framework
     'rest_framework_simplejwt',  # JWT authentication
@@ -56,6 +58,8 @@ CHANNEL_LAYERS = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -155,6 +159,12 @@ REST_FRAMEWORK = {
     ],
     'EXCEPTION_HANDLER': 'iot.handlers.custom_exception_handler',
 }
+
+
+
+CORS_ALLOWED_ORIGINS = [
+    f"http://{FRONTEND}:5173",
+]
 
 # DB settings
 MAXIMUM_ROOMS = 3
