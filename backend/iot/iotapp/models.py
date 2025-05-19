@@ -11,11 +11,13 @@ class Action(models.TextChoices):
     OFF = 'off', 'off'
     TOGGLE = 'toggle', 'toggle'
     READ = 'read', 'read'
+    SET = 'set', 'set'
 
 class Type(models.TextChoices):
     LED = 'led', 'led'
     MOTOR = 'motor', 'motor'
-    DHT = 'dht', 'dht'
+    DHT = 'dht', 'dht',
+    DHT_HUMIDITY = 'dht_humidity', 'dht_humidity'
     LDR = 'ldr', 'ldr'
     PIR = 'pir', 'pir'
 
@@ -23,6 +25,7 @@ class ApiType(models.TextChoices):
     LED = 'led', 'led'
     MOTOR = 'motor', 'motor'
     DHT = 'dht', 'dht'
+    DHT_HUMIDITY = 'dht_humidity', 'dht_humidity'
     LDR = 'ldr', 'ldr'
     PIR = 'pir', 'pir'
     MODE = 'mode', 'mode'
@@ -35,6 +38,10 @@ class Room(models.Model):
             MinValueValidator(1),   # Minimum value
             MaxValueValidator(3)  # Maximum value
         ])
+    mode = models.IntegerField(validators=[
+            MinValueValidator(0),   # Minimum value
+            MaxValueValidator(1)  # Maximum value
+        ])
 
     def __str__(self):
         return self.name
@@ -45,7 +52,10 @@ class Component(models.Model):
         max_length=50,
         choices=Type.choices
         )
-    pin = models.IntegerField(unique=True, validators=[
+    pin = models.IntegerField(unique=True, 
+        null=True,
+        blank=True,
+        validators=[
             MinValueValidator(1),   # Minimum value
             MaxValueValidator(20)  # Maximum value
         ])
@@ -69,7 +79,7 @@ class ComponentData(models.Model):
         )
     timestamp = models.DateTimeField(auto_now_add=True)
     previous_value = models.IntegerField(null=True, blank=True)
-    current_value = models.IntegerField(null=True, blank=True)
+    current_value = models.IntegerField()
 
     def __str__(self):
         return f"{self.component} - {self.get_action_display()} at {self.timestamp}"
