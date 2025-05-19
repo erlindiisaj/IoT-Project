@@ -27,6 +27,16 @@ class ComponentSerializer(serializers.ModelSerializer):
         component_type = data.get('type')
         pin = data.get('pin')
 
+        if pin is None and component_type != "dht_humidity":
+            raise serializers.ValidationError({
+                'pin': 'Pin is required for this component type.'
+            })
+        
+        if pin is not None and component_type == "dht_humidity":
+            raise serializers.ValidationError({
+                'pin': 'Pin is not allowed for this component type. You can use "dht" type instead.'
+            })
+
         if component_type in PIN_MAP:
             allowed_pins = PIN_MAP[component_type]
             if allowed_pins and pin not in allowed_pins:
@@ -52,6 +62,7 @@ class EventDataSerializer(serializers.Serializer):
     
     type = serializers.ChoiceField(
         choices=ApiType.choices,
+        allow_null = True,
         error_messages={'invalid_choice': 'Invalid type choice.'}
     )
 
@@ -65,6 +76,6 @@ class EventDataSerializer(serializers.Serializer):
         error_messages={'invalid_choice': 'Invalid mode choice.'}
     )
 
-    previous_value = serializers.IntegerField()
+    previous_value = serializers.IntegerField(allow_null=True, required=False)
 
-    current_value = serializers.IntegerField()
+    current_value = serializers.IntegerField() 

@@ -4,7 +4,6 @@ from . import views
 urlpatterns = [
     path('rooms/get/<int:room_id>/', views.get_room, name='room'),
     path('rooms/get/all/', views.get_rooms, name='all_rooms'),
-    path('rooms/get/mode/<int:room_id>/', views.get_room_mode, name='room_mode'),
     path('rooms/get/all/components/<int:room_id>/', views.get_components_by_room, name='components_by_room'),
     path('rooms/get/all/components/values/<int:room_id>/', views.get_room_components_values, name='components_by_room_mode'),
     path('rooms/create/', views.create_room, name='create_room'),

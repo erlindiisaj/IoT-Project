@@ -20,17 +20,6 @@ def get_rooms(request):
     serializer = RoomSerializer(rooms, many=True)
     return Response(serializer.data)
 
-@api_view(['GET'])
-def get_room_mode(request, room_id):
-    room = get_object_or_404(Room, id=room_id)
-    response = requests.get(f'http://{ARDUINO_IP}/mode?id={room.arduiono_id}')
-    if response.status_code == 200:
-        try:
-            return Response(response.json())
-        except ValueError:
-            return Response({"error": "Invalid JSON from Arduino"}, status=500)
-    return Response({"error": "Failed to get room mode"}, status=response.status_code)
-
 @api_view(['POST'])
 def create_room(request):
     if Room.objects.count() >= MAXIMUM_ROOMS:
@@ -59,14 +48,20 @@ def update_room_mode(request, room_id):
     if value < 0 or value > 1:
         return Response({"error": "Mode must be 0 or 1."}, status=400)
     
+    if room.mode == value:
+        return Response(status=204)
+    
     response = requests.put(f'http://{ARDUINO_IP}/mode?id={room.arduiono_id}&val={value}')
     if response.status_code == 200:
         try:
-            return Response(response.json())
+            room.mode = value
+            room.save()
+            serializer = RoomSerializer(room)
+            return Response(serializer.data)
         except ValueError:
             return Response({"error": "Invalid JSON from Arduino"}, status=500)
 
-    return Response({"error": "Failed to update Room Mode"}, status=response.status_code)
+    return Response({"error": "Failed to update Room Mode"}, status=500)
 
 @api_view(['DELETE'])
 def delete_room(request, room_id):
@@ -107,62 +102,88 @@ def get_room_components_values(request, room_id):
     
     component_values = []
     errors = []
-    for component in components:
-        response = requests.get(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}')
-        if response.status_code == 200:
-            try:
-                component_values.append({
-                    "component_id": component.id,
-                    "value": response.json().get('value', 0)
-                })
-            except ValueError:
-                errors.append({"component_id": component.id, "error": "Invalid JSON from Arduino"})
-    
-    if errors:
-        print(errors)
-        return Response({"error": "Failed to get some component values", "data": component_values}, status=500)
 
-    return Response(component_values)
+    for component in components:
+        component_value = ComponentData.objects.filter(component=component) \
+                        .order_by('-timestamp') \
+                        .values_list('current_value', flat=True) \
+                        .first()
+        
+        if component_value is None:
+            errors.append({"component": component.id, "error": "No data found."})
+            continue
+        
+        serializer = ComponentSerializer(component)
+        component_values.append({
+            'component': serializer.data,
+            'value': component_value
+        })
+
+    if errors:
+        return Response({"errors": errors}, component_values, status=500)
+    
+    return Response(component_values, status=200)
+
+
 
 @api_view(['GET'])
 def get_component_value(request, component_id):
     component = get_object_or_404(Component, id=component_id)
-    response = requests.get(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}')
-    if response.status_code == 200:
-        try:
-            # save the data to the database
-            component_data = ComponentData(
-                component=component,
-                action=Action.READ,
-                mode=Mode.BACKEND,
-                previous_value=None,
-                current_value=response.json().get('value', 0)
-            )
-            component_data.save()
-            return Response(response.json())
-        except ValueError:
-            return Response({"error": "Invalid JSON from Arduino"}, status=500)
-    return Response({"error": "Failed to get value from Arduino"}, status=response.status_code)
+    component_value = ComponentData.objects.filter(component=component) \
+                        .order_by('-timestamp') \
+                        .values_list('current_value', flat=True) \
+                        .first()
+    serializer = ComponentSerializer(component)
+
+    if component_value is None:
+        return Response({"error": "No data found."}, status=404)
+    
+    return Response({
+        'component': serializer.data,
+        'value': component_value
+    }, status=200)
+
 
 @api_view(['POST'])
 def recreate_components(request):
     if request.data.get('power') != 'on':
         return Response({"error": "Power is off"}, status=400)
     
+    rooms = Room.objects.all()
+    if not rooms:
+        return Response({"error": "No rooms found"}, status=404)
+    
+    errors = []
+
+    for room in rooms:
+        response = requests.put(f'http://{ARDUINO_IP}/mode?id={room.arduiono_id}&val={room.mode}')
+        if response.status_code != 200:
+            errors.append({"room": room.id, "error": response.status_code})
+    
     components = Component.objects.all()
     if not components:
         return Response({"error": "No components found"}, status=404)
     
-    errors = []
-    
     for component in components:
+
+        if component.type == "dht_humidity":
+            continue
+
         response = requests.post(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}&pin={component.pin}')
         if response.status_code != 200:
-            errors.append({"component": component.id, "error": response.status_code})
+            errors.append({"component": component.id, "error_type": "create", "error_code": response.status_code, "error": response.json()})
+        else:
+            current_value = ComponentData.objects.filter(component=component) \
+                            .order_by('-timestamp') \
+                            .values_list('current_value', flat=True) \
+                            .first()
+            set_value = requests.put(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}&val={current_value}')
+            if set_value.status_code != 200:
+                errors.append({"component": component.id, "error_type": "set", "error_code": set_value.status_code, "error": response.json()})
     
     if errors:
-        print(errors)
-        return Response(status=500)
+        # print(errors)
+        return Response(errors, status=500)
     
     return Response(status=200)
 
@@ -171,6 +192,13 @@ def create_component(request):
     serializer = ComponentSerializer(data=request.data)
     if not serializer.is_valid():
         return Response({"error": serializer.errors}, status=400)
+    
+    if request.data['type'] == "dht_humidity" and Component.objects.filter(type=request.data['type'], room_id = request.data['room']).count() == 1:
+        return Response({"error": "Only one DHT component per room is allowed"}, status=400)
+
+    if request.data['type'] == "dht_humidity":
+        serializer.save()
+        return Response(serializer.data, status=201)
 
     if Component.objects.filter(type=request.data['type']).count() >= MAXIMUM_COMPONENT_PER_TYPE:
         return Response({"error": "Maximum number of the submitted component reached"}, status=400)
@@ -194,17 +222,31 @@ def update_component_value(request, component_id):
     if component.type not in ['led', 'motor']:
         return Response({"error": "Invalid component type. Only 'led' and 'motor' are allowed."}, status=400)
     
-    if not request.data.get('value'):
+    raw_value = request.data.get('value')
+    if raw_value is None:
         return Response({"error": "Value is required."}, status=400)
+
+    try:
+        value = int(raw_value)
+    except (ValueError, TypeError):
+        return Response({"error": "Value must be an integer."}, status=400)
     
-    value = int(request.data.get('value'))
     if value < 0 or value > 100:
         return Response({"error": "Value must be between 0 and 100."}, status=400)
+    
+    previous_value = ComponentData.objects.filter(component=component) \
+                        .order_by('-timestamp') \
+                        .values_list('current_value', flat=True) \
+                        .first()
+    
+    if value == previous_value:
+        return Response(status=204)
 
     response = requests.put(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}&val={value}')
     if response.status_code == 200:
         try:
-            return Response(response.json())
+            response_data = response.json()
+            return Response(response_data)
         except ValueError:
             return Response({"error": "Invalid JSON from Arduino"}, status=500)
     return Response({"error": "Failed to update Arduino"}, status=500)
@@ -212,6 +254,11 @@ def update_component_value(request, component_id):
 @api_view(['DELETE'])
 def delete_component(request, component_id):
     component = get_object_or_404(Component, id=component_id)
+
+    if component.type == "dht_humidity":
+        component.delete()
+        return Response({"message": f"Component with '{component.id}' deleted successfully"}, status=200)
+
     response = requests.delete(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}')
     if response.status_code != 200:
         return Response({"error": "Failed to delete component from Arduino"}, status=response.status_code)
@@ -258,4 +305,3 @@ def delete_component_data(request, component_data_id):
     component_data = get_object_or_404(ComponentData, id=component_data_id)
     component_data.delete()
     return Response({"message": f"Component data with '{component_data.id}' deleted successfully"}, status=200)
-
