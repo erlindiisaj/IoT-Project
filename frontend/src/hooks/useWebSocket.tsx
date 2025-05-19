@@ -1,18 +1,24 @@
 import { useEffect, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-
 import { WEBSOCKET_URL } from "src/config-global";
+import { useSensorsStore } from "@store/sensors";
 
-interface SensorReading {
-  sensorId: number;
-  temperature: number;
-  humidity: number;
+interface componentData {
+  action: string;
+  component: number;
+  current_value: number;
+  id: number;
+  mode: string;
+  previous_value: number;
   timestamp: string;
 }
-
-export function useWebSocketWithReactQuery(queryKey: readonly unknown[]) {
+interface webSocketData {
+  type: string;
+  data: componentData;
+}
+export function useWebSocketSensorSync() {
   const ws = useRef<WebSocket | null>(null);
-  const queryClient = useQueryClient();
+  const setSensors = useSensorsStore((state) => state.setSensors);
+  const sensors = useSensorsStore((state) => state.sensors);
 
   useEffect(() => {
     ws.current = new WebSocket(WEBSOCKET_URL);
@@ -23,33 +29,31 @@ export function useWebSocketWithReactQuery(queryKey: readonly unknown[]) {
 
     ws.current.onmessage = (event: MessageEvent) => {
       try {
-        const data = JSON.parse(event.data);
+        const data: webSocketData = JSON.parse(event.data);
         console.log("WebSocket message received:", data);
 
-        // Normalize data to an array of SensorReading objects
-        const newReadings: SensorReading[] = Array.isArray(data)
-          ? data
-          : [data];
+        if (data.type === "component_data") {
+          const sensorId = data.data.component;
+          const value = data.data.current_value;
 
-        queryClient.setQueryData<SensorReading[]>(queryKey, (oldData) => {
-          if (!oldData) return newReadings;
+          console.log("Sensor ID:", sensorId);
+          console.log("Sensor Value:", value);
 
-          // Create a copy to avoid mutating oldData directly
-          const updated = [...oldData];
+          // Find which sensor in Zustand matches this component ID
+          const sensorKey = Object.keys(sensors).find(
+            (key) => sensors[key as keyof typeof sensors].id === sensorId
+          ) as keyof typeof sensors | undefined;
 
-          newReadings.forEach((newReading) => {
-            const idx = updated.findIndex(
-              (r) => r.sensorId === newReading.sensorId
-            );
-            if (idx !== -1) {
-              updated[idx] = newReading; // Replace existing reading
-            } else {
-              updated.push(newReading); // Add new sensor reading
-            }
-          });
-
-          return updated;
-        });
+          if (sensorKey) {
+            // Update Zustand store
+            setSensors({
+              [sensorKey]: {
+                ...sensors[sensorKey],
+                value: value,
+              },
+            });
+          }
+        }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
       }
@@ -66,5 +70,5 @@ export function useWebSocketWithReactQuery(queryKey: readonly unknown[]) {
     return () => {
       ws.current?.close();
     };
-  }, [queryClient, queryKey]);
+  }, [setSensors, sensors]);
 }

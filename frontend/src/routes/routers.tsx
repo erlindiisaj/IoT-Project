@@ -12,13 +12,11 @@ import { Dashboard } from "@pages/dashboard";
 // Route guards
 function PrivateRoute({ element }: { element: JSX.Element }) {
   const { isAuthenticated } = useAuthStore();
-  console.log("isAuthenticated", isAuthenticated);
   return isAuthenticated ? element : <Navigate to="/sign-in" replace />;
 }
 
 function PublicRoute({ element }: { element: JSX.Element }) {
   const { isAuthenticated } = useAuthStore();
-  console.log("isAuthenticated", isAuthenticated);
   return isAuthenticated ? <Navigate to="/" replace /> : element;
 }
 
