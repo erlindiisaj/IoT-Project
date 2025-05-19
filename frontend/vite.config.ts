@@ -6,7 +6,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   server: {
-    host: "192.168.1.105",
+    host: "192.168.1.111",
     port: 5173,
   },
 });
