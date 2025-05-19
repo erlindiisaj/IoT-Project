@@ -4,12 +4,19 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { SvgColor } from "@components/svg-color";
 import { CreateRoomDialog } from "./create-room-dialog";
+import type { IRoom } from "@interfaces/IRoom";
+import { useSensorsStore } from "src/store/sensors";
 
-export default function RoomDropdown() {
+interface IRoomDropdownProps {
+  rooms: IRoom[];
+}
+
+export default function RoomDropdown({ rooms }: IRoomDropdownProps) {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [selectedRoom, setSelectedRoom] = React.useState<string | null>(null);
   const open = Boolean(anchorEl);
   const [openCreateDialog, setOpenCreateDialog] = React.useState(false);
+
+  const { setRoom, room } = useSensorsStore();
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -19,8 +26,9 @@ export default function RoomDropdown() {
     setAnchorEl(null);
   };
 
-  const handleSelect = (room: string) => {
-    setSelectedRoom(room);
+  const handleSelect = (room: IRoom) => {
+    setRoom(room);
+
     handleClose();
   };
 
@@ -44,7 +52,7 @@ export default function RoomDropdown() {
         }}
         endIcon={open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
       >
-        {selectedRoom || "Select Room"}
+        {room?.name || "Select Room"}
       </Button>
       <Menu
         slotProps={{
@@ -59,11 +67,11 @@ export default function RoomDropdown() {
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
       >
-        <MenuItem onClick={() => handleSelect("Living Room")}>
-          Living Room
-        </MenuItem>
-        <MenuItem onClick={() => handleSelect("Bedroom")}>Bedroom</MenuItem>
-        <MenuItem onClick={() => handleSelect("Bathroom")}>Bathroom</MenuItem>
+        {rooms.map((room) => (
+          <MenuItem key={room.id} onClick={() => handleSelect(room)}>
+            {room.name}
+          </MenuItem>
+        ))}
 
         <Divider />
 

@@ -9,6 +9,9 @@ import { LedSliderView } from "./components/led-slider-view";
 import { MainContentContainer } from "src/layouts/dashboard/main";
 import { CurtainSliderView } from "./components/curtain-slider-view";
 import { useWebSocketWithReactQuery } from "src/hooks/useWebSocket";
+import { useRoom } from "src/hooks/useRoom";
+import { useSensorsStore } from "@store/sensors";
+import { useComponents } from "src/hooks/useComponents";
 
 const initialLedState = {
   active: false,
@@ -41,6 +44,17 @@ export function Dashboard() {
   );
 
   const [currentSliderView, setCurrentSliderView] = useState("led");
+
+  const { getRooms } = useRoom();
+  const { data: rooms } = getRooms;
+
+  const { room } = useSensorsStore();
+  console.log("Room: ", room);
+  const { getComponents, getAllComponents } = useComponents(7);
+  const { data: components } = getComponents;
+  const { data: allComponents } = getAllComponents;
+  console.log("All Components: ", allComponents);
+  console.log("Components: ", components);
 
   const socketData = useWebSocketWithReactQuery(["queryKey"]);
   console.log("Socket Data: ", socketData);
@@ -153,7 +167,7 @@ export function Dashboard() {
                     85C
                   </Typography>
                 </Box>
-                <RoomDropdown />
+                <RoomDropdown rooms={rooms} />
               </Box>
             </Box>
             <Box
