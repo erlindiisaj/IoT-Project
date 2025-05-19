@@ -1,8 +1,7 @@
 import { SvgColor } from "@components/svg-color";
-import type { updateComponentValue } from "@interfaces/IComponents";
+import type { IRoom, updateRoomDTO } from "@interfaces/IRoom";
 import { Card, Box, Switch, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import type { Sensor } from "@store/sensors";
 
 interface SensorWidgetProps {
   icon: Icons;
@@ -10,10 +9,10 @@ interface SensorWidgetProps {
   value: string | number;
   color?: string;
   active?: boolean;
-  onClick: (payload: updateComponentValue) => void;
+  modeChange: (payload: updateRoomDTO) => void;
   changeViewer?: () => void;
   checkButton?: boolean;
-  sensor: Sensor;
+  room: IRoom;
 }
 
 interface Icons {
@@ -21,7 +20,7 @@ interface Icons {
   inactive?: string;
 }
 
-export function SensorWidget({
+export function ModeWidget({
   icon,
   title,
   value,
@@ -29,8 +28,8 @@ export function SensorWidget({
   active = false,
   checkButton = false,
   changeViewer,
-  onClick,
-  sensor,
+  modeChange,
+  room,
 }: SensorWidgetProps) {
   const theme = useTheme();
 
@@ -82,9 +81,9 @@ export function SensorWidget({
           <Switch
             onClick={(e) => {
               e.stopPropagation();
-              onClick({
-                id: sensor.id,
-                value: Number(sensor.value) > 0 ? 0 : 100,
+              modeChange({
+                id: room.id,
+                mode: Number(room.mode) > 0 ? "0" : 1,
               });
             }}
             color="default"

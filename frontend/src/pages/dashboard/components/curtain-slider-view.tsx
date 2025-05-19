@@ -2,12 +2,10 @@ import { useState, useRef } from "react";
 import { Card, Switch, Typography, Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import CircularSlider from "@fseehawer/react-circular-slider";
+import type { Sensor } from "@store/sensors";
 
 interface LedSliderViewProps {
-  curtain: {
-    active: boolean;
-    value: string;
-  };
+  curtain: Sensor;
   checkButtonClick: () => void;
   curtainPercentage: number | string;
   setCurtainPercentage: (value: number | string) => void;
@@ -54,7 +52,7 @@ export function CurtainSliderView({
         <Switch
           color="warning"
           onClick={checkButtonClick}
-          checked={curtain.active}
+          checked={Number(curtain.value) > 0 ? true : false}
         />
       </Box>
       <Box

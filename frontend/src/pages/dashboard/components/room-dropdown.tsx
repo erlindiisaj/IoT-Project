@@ -44,7 +44,7 @@ export default function RoomDropdown({ rooms }: IRoomDropdownProps) {
         color="inherit"
         onClick={handleClick}
         sx={{
-          minWidth: 150,
+          width: 150,
           justifyContent: "space-between",
           textTransform: "none",
           paddingRight: 1.5,
