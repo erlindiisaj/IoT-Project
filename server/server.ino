@@ -300,7 +300,7 @@ String createPayload(const String& type, int id, const String& action, const Str
 
 void notifyBackend(const String& payload, const String& apiPoint) {
   WiFiClient client;
-  const char* host = "192.168.1.110";
+  const char* host = "192.168.146.91";
 
   if (client.connect(host, 80)) {
     client.println("POST /" + apiPoint + " HTTP/1.1");

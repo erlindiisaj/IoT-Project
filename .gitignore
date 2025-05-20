@@ -1,5 +1,3 @@
-server/wifi_creds.h
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
