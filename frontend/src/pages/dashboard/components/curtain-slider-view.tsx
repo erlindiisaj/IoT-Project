@@ -1,31 +1,55 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, Switch, Typography, Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import CircularSlider from "@fseehawer/react-circular-slider";
-import type { Sensor } from "@store/sensors";
 
-interface LedSliderViewProps {
+import type { Sensor } from "@store/sensors";
+import type { updateComponentValue } from "@interfaces/IComponents";
+
+interface CurtainSliderViewProps {
   curtain: Sensor;
-  checkButtonClick: () => void;
-  curtainPercentage: number | string;
-  setCurtainPercentage: (value: number | string) => void;
+  checkButtonClick: (payload: updateComponentValue) => void;
 }
 
 export function CurtainSliderView({
   curtain,
   checkButtonClick,
-  curtainPercentage,
-  setCurtainPercentage,
-}: LedSliderViewProps) {
+}: CurtainSliderViewProps) {
   const theme = useTheme();
-  const [tempValue, setTempValue] = useState<number | string>(
-    curtainPercentage
-  );
-  const sliderRef = useRef<HTMLDivElement>(null);
+  const [motorValue, setTempValue] = useState<number>(Number(curtain.value));
+  const [isInteracting, setIsInteracting] = useState(false);
 
-  const handlePointerUp = () => {
-    setCurtainPercentage(tempValue);
-  };
+  // Sync temp value from live led value unless user is currently interacting
+  useEffect(() => {
+    if (!isInteracting) {
+      setTempValue(Number(curtain.value));
+    }
+  }, [curtain.value, isInteracting]);
+
+  // Handle pointer/touch/mouse release globally to catch all cases
+  useEffect(() => {
+    const handleGlobalPointerUp = () => {
+      if (isInteracting) {
+        setIsInteracting(false);
+        checkButtonClick({
+          id: curtain.id,
+          value: motorValue,
+        });
+      }
+    };
+
+    window.addEventListener("mouseup", handleGlobalPointerUp);
+    window.addEventListener("touchend", handleGlobalPointerUp);
+    window.addEventListener("pointerup", handleGlobalPointerUp);
+
+    return () => {
+      window.removeEventListener("mouseup", handleGlobalPointerUp);
+      window.removeEventListener("touchend", handleGlobalPointerUp);
+      window.removeEventListener("pointerup", handleGlobalPointerUp);
+    };
+  }, [isInteracting, motorValue, curtain.id, checkButtonClick]);
+
+  const data = Array.from({ length: 100 }, (_, i) => i + 1);
 
   return (
     <Card
@@ -50,32 +74,42 @@ export function CurtainSliderView({
           Curtain Control
         </Typography>
         <Switch
-          color="warning"
-          onClick={checkButtonClick}
-          checked={Number(curtain.value) > 0 ? true : false}
+          color="error"
+          onClick={(e) => {
+            e.stopPropagation();
+            checkButtonClick({
+              id: curtain.id,
+              value: Number(curtain.value) > 0 ? 0 : motorValue,
+            });
+          }}
+          checked={Number(curtain.value) < 100}
         />
       </Box>
+
       <Box
-        ref={sliderRef}
-        onPointerUp={handlePointerUp}
-        onMouseUp={handlePointerUp} // fallback
-        onTouchEnd={handlePointerUp} // fallback
+        onPointerDown={() => setIsInteracting(true)}
+        onTouchStart={() => setIsInteracting(true)}
+        onMouseDown={() => setIsInteracting(true)}
       >
         <CircularSlider
           label="Curtain %"
+          data={data}
+          dataIndex={motorValue - 1}
+          onChange={(value) => setTempValue(value as number)}
           labelColor={theme.palette.common.black}
-          knobColor={theme.palette.warning.darker}
-          progressColorFrom={theme.palette.warning.light}
-          progressColorTo={theme.palette.warning.dark}
+          knobColor={theme.palette.error.darker}
+          progressColorFrom={theme.palette.error.light}
+          progressColorTo={theme.palette.error.dark}
           progressSize={16}
           trackColor={theme.palette.grey[200]}
           trackSize={20}
-          dataIndex={+curtainPercentage - 1}
           width={250}
-          data={Array.from({ length: 100 }, (_, i) => i + 1)}
-          onChange={(value) => setTempValue(value)}
         />
       </Box>
+
+      <Typography variant="h6" sx={{ mt: 2 }}>
+        Curtain Closed: {motorValue}%
+      </Typography>
     </Card>
   );
 }

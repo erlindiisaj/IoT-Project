@@ -1,7 +1,19 @@
 import ReactApexChart from "react-apexcharts";
-import { Card, CardContent, Typography, useTheme, Box } from "@mui/material";
+import {
+  Card,
+  CardContent,
+  Typography,
+  useTheme,
+  Box,
+  CircularProgress,
+} from "@mui/material";
+import type { ChartSeries } from "src/hooks/useSensorHistory";
 
-const SensorChart = () => {
+interface SensorChartProps {
+  data?: ChartSeries[];
+}
+
+const SensorChart = ({ data }: SensorChartProps) => {
   const theme = useTheme();
 
   // Labels like the second component's days in April 2024 (showing just first 30 days)
@@ -111,47 +123,29 @@ const SensorChart = () => {
     },
   };
 
-  const series = [
-    {
-      name: "Temperature (°C)",
-      data: [
-        21, 22, 23, 22, 24, 23, 25, 26, 24, 23, 22, 21, 22, 23, 24, 25, 25, 24,
-        23, 22, 21, 21, 22, 23, 24, 24, 25, 26, 26, 27,
-      ],
-    },
-    {
-      name: "LED Brightness (%)",
-      data: [
-        0, 20, 40, 60, 80, 100, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0, 20,
-        40, 60, 80, 100, 80, 60, 40, 20, 0, 10, 30, 50,
-      ],
-    },
-    {
-      name: "Motion Events",
-      data: [
-        5, 10, 8, 12, 15, 20, 18, 17, 14, 13, 12, 11, 10, 9, 8, 12, 15, 16, 18,
-        20, 25, 22, 20, 18, 17, 15, 13, 11, 9, 7,
-      ],
-    },
-  ];
-
   return (
     <Card>
       <CardContent>
         <Box mb={2}>
           <Typography variant="h6" gutterBottom>
-            Sensor Activity Overview - Last 30 Days
+            Sensor Activity Overview - Last 30 changes
           </Typography>
           <Typography variant="caption" color="textSecondary" gutterBottom>
-            Temperature, LED brightness & motion events per day
+            Temperature, LED brightness & motion events
           </Typography>
         </Box>
-        <ReactApexChart
-          options={options}
-          series={series}
-          type="area"
-          height={350}
-        />
+        {data ? (
+          <ReactApexChart
+            options={options}
+            series={data}
+            type="area"
+            height={350}
+          />
+        ) : (
+          <Box sx={{ display: "flex", justifyContent: "center", padding: 2 }}>
+            <CircularProgress />
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

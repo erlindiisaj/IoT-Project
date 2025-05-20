@@ -44,6 +44,11 @@ export class APIClient<T> {
     return res.data;
   };
 
+  getSingle = async (config?: AxiosRequestConfig) => {
+    const res = await api.get<T>(`${this.endpoint}/`, config);
+    return res.data;
+  };
+
   getFiltered = async (
     params?: { filter_id?: number; start_date?: Date; end_date?: Date },
     config?: AxiosRequestConfig

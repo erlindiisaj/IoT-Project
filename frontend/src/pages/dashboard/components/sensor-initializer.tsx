@@ -21,7 +21,9 @@ export const SensorInitializer = ({ roomId }: Props) => {
       const { id, type, pin, room } = component;
 
       // Only assign if type exists in your defined keys
-      if (["led", "pir", "motor", "dht", "ldr"].includes(type)) {
+      if (
+        ["led", "pir", "motor", "dht", "ldr", "dht_humidity"].includes(type)
+      ) {
         acc[type as keyof typeof acc] = {
           id,
           type,

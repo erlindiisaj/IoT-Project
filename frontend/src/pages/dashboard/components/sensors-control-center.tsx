@@ -14,18 +14,13 @@ import type { updateComponentValue } from "@interfaces/IComponents";
 import { ModeWidget } from "./mode-widget";
 
 export function SensorsControlCenter() {
-  const [curtainPercentage, setCurtainPercentage] = useState<string | number>(
-    0
-  );
-
   const [currentSliderView, setCurrentSliderView] = useState("led");
 
   const { room, sensors, loading, setSensors, setRoom } = useSensorsStore();
 
-  const { led, pir, motor, dht } = sensors;
+  const { led, pir, motor, dht, dht_humidity } = sensors;
 
   const { updateComponentValue } = useComponents(room?.id);
-  console.log("Sensors: ", sensors);
 
   const { updateRoom } = useRoom();
 
@@ -40,8 +35,15 @@ export function SensorsControlCenter() {
     updateComponentValue.mutate(payload);
   };
 
-  const handleMotionClick = () => {
-    console.log("Motion sensor clicked");
+  const handleMotionClick = (payload: updateComponentValue) => {
+    setSensors({
+      motor: {
+        ...sensors.motor,
+        value: payload.value,
+      },
+    });
+
+    updateComponentValue.mutate(payload);
   };
 
   const handleCurtainClick = (payload: updateComponentValue) => {
@@ -117,7 +119,7 @@ export function SensorsControlCenter() {
               src="/assets/humidity.svg"
             />
             <Typography color="primary.dark" variant="body2">
-              50%
+              {dht_humidity.value}%
             </Typography>
           </Box>
           <Box
@@ -207,8 +209,6 @@ export function SensorsControlCenter() {
         <CurtainSliderView
           curtain={motor}
           checkButtonClick={handleMotionClick}
-          curtainPercentage={curtainPercentage}
-          setCurtainPercentage={setCurtainPercentage}
         />
       )}
     </>
