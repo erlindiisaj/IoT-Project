@@ -3,6 +3,12 @@
 # 🌐 IoT Smart Curtain and Automation System
 
 This is an IoT-based automation system developed as part of the **BLM 4026 – Introduction to Internet of Things** course at Çanakkale Onsekiz Mart University, Spring 2025. The system integrates a smart curtain mechanism with real-time web and hardware interfaces using a combination of frontend (Vite + Vue), backend (Django + Daphne + Redis), and microcontroller-based sensor communication.
+---
+## DEMO
+
+You can find our demo at the link below:
+
+📺 [Project Demonstration](https://www.youtube.com/shorts/NRRbjdAVLkE)
 
 ---
 
