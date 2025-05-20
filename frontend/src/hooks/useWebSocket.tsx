@@ -30,14 +30,10 @@ export function useWebSocketSensorSync() {
     ws.current.onmessage = (event: MessageEvent) => {
       try {
         const data: webSocketData = JSON.parse(event.data);
-        console.log("WebSocket message received:", data);
 
         if (data.type === "component_data") {
           const sensorId = data.data.component;
           const value = data.data.current_value;
-
-          console.log("Sensor ID:", sensorId);
-          console.log("Sensor Value:", value);
 
           // Find which sensor in Zustand matches this component ID
           const sensorKey = Object.keys(sensors).find(

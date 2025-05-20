@@ -91,7 +91,7 @@ export function LedSliderView({ led, checkButtonClick }: LedSliderViewProps) {
         <CircularSlider
           label="Led %"
           data={data}
-          dataIndex={0}
+          dataIndex={tempValue}
           onChange={(value) => setTempValue(value as number)}
           labelColor={theme.palette.common.black}
           knobColor={theme.palette.error.darker}

@@ -1,8 +1,14 @@
 import { SvgColor } from "@components/svg-color";
 import { Card, CardMedia, Typography, Box } from "@mui/material";
 import { useAuthStore } from "@store/authStore";
+import type { WeatherData } from "src/hooks/useWeather";
 
-export function WeatherCard() {
+interface WeatherCardProps {
+  data?: WeatherData;
+  isLoading: boolean;
+}
+
+export function WeatherCard({ data, isLoading }: WeatherCardProps) {
   const { user } = useAuthStore();
   return (
     <Card
@@ -43,7 +49,10 @@ export function WeatherCard() {
           }}
         >
           <SvgColor src="/assets/temp.svg" />
-          <Typography variant="h6">+ 2.5°C Outdoor temperature</Typography>
+          <Typography variant="h6" sx={{ marginLeft: 2 }}>
+            {isLoading ? "Loading... " : `${data?.current.temp_c}°C `}
+            Outdoor Temperature
+          </Typography>
         </Box>
       </Box>
 

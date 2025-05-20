@@ -4,7 +4,7 @@ import { create } from "zustand";
 export interface Sensor {
   id: number;
   type: string;
-  pin: number;
+  pin?: number;
   room: number;
   value: string | number;
 }
@@ -16,6 +16,7 @@ export interface SensorsStore {
     motor: Sensor;
     dht: Sensor;
     ldr: Sensor;
+    dht_humidity: Sensor;
   };
   loading: boolean;
   setSensors: (sensors: Partial<SensorsStore["sensors"]>) => void;
@@ -59,6 +60,13 @@ export const useSensorsStore = create<SensorsStore>((set) => ({
       id: 5,
       type: "dht",
       pin: 5,
+      room: 1,
+      value: 0,
+    },
+    dht_humidity: {
+      id: 6,
+      type: "dht_humidity",
+      pin: 6,
       room: 1,
       value: 0,
     },

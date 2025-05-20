@@ -1,5 +1,4 @@
-import SessionsChart from "@components/chart/chart";
-import { Grid, Box, Typography } from "@mui/material";
+import { Grid, Box, Typography, Card } from "@mui/material";
 import RoomDropdown from "./components/room-dropdown";
 import { WeatherCard } from "./components/weather-card";
 import { MainContentContainer } from "src/layouts/dashboard/main";
@@ -9,12 +8,20 @@ import { useSensorsStore } from "@store/sensors";
 
 import { SensorsControlCenter } from "./components/sensors-control-center";
 import { SensorInitializer } from "./components/sensor-initializer";
+import { useWeather } from "src/hooks/useWeather";
+import SensorChart from "@components/chart/chart";
+import { useSensorHistory } from "src/hooks/useSensorHistory";
 
 export function Dashboard() {
   const { getRooms } = useRoom();
   const { data: rooms } = getRooms;
-  console.log("Rooms: ", rooms);
   const { room } = useSensorsStore();
+
+  const { getWeather } = useWeather();
+  const { data: weather, isLoading } = getWeather;
+
+  const { getSensorHistory } = useSensorHistory(room?.id);
+  const { data: chartData } = getSensorHistory;
 
   useWebSocketSensorSync();
 
@@ -28,7 +35,7 @@ export function Dashboard() {
               flexDirection: "column",
             }}
           >
-            <WeatherCard />
+            <WeatherCard data={weather} isLoading={isLoading} />
             <Box
               sx={{
                 display: "flex",
@@ -60,7 +67,22 @@ export function Dashboard() {
           </Box>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SessionsChart />
+          {room ? (
+            <SensorChart data={chartData} />
+          ) : (
+            <Card
+              sx={{
+                padding: 3,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Typography variant="body2">
+                Waiting for room selection to show sensor data.
+              </Typography>
+            </Card>
+          )}
         </Grid>
         <Grid size={{ xs: 12, md: 8 }}></Grid>
       </Grid>
