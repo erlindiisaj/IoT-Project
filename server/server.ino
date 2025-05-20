@@ -25,7 +25,7 @@ int motorValues[ROOMS] = {0, 0, 0};
 
 int dhtPins[ROOMS] = {-1, -1, -1};
 DHT* dht_arr[ROOMS] = {nullptr, nullptr, nullptr};
-int dhtValues[ROOMS] = {-100, -100, -100};
+int dhtValues[ROOMS] = {0, 0, 0};
 int humidityValues[ROOMS] = {0, 0, 0};
 
 int ldrPins[ROOMS] = {-1, -1, -1};
@@ -371,7 +371,7 @@ void handleAssignDht(WiFiClient& client, int id, int pin) {
   dht_arr[id] = new DHT(pin, DHTTYPE);
   dht_arr[id]->begin();
   dhtPins[id] = pin;
-  dhtValues[id] = -100;
+  dhtValues[id] = 0;
   humidityValues[id] = 0;
 
   notifyBackend(createPayload("dht", id, "set", "manual", NULL_INT, -100), "event");
