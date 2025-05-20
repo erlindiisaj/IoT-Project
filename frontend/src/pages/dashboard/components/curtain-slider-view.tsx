@@ -9,11 +9,13 @@ import type { updateComponentValue } from "@interfaces/IComponents";
 interface CurtainSliderViewProps {
   curtain: Sensor;
   checkButtonClick: (payload: updateComponentValue) => void;
+  disabled?: boolean;
 }
 
 export function CurtainSliderView({
   curtain,
   checkButtonClick,
+  disabled,
 }: CurtainSliderViewProps) {
   const theme = useTheme();
   const [motorValue, setTempValue] = useState<number>(Number(curtain.value));
@@ -74,15 +76,16 @@ export function CurtainSliderView({
           Curtain Control
         </Typography>
         <Switch
+          disabled={disabled}
           color="error"
           onClick={(e) => {
             e.stopPropagation();
             checkButtonClick({
               id: curtain.id,
-              value: Number(curtain.value) > 0 ? 0 : motorValue,
+              value: Number(curtain.value) > 0 ? 0 : 100,
             });
           }}
-          checked={Number(curtain.value) < 100}
+          checked={Number(curtain.value) > 0 ? false : true}
         />
       </Box>
 
@@ -95,6 +98,7 @@ export function CurtainSliderView({
           label="Curtain %"
           data={data}
           dataIndex={motorValue - 1}
+          knobDraggable={!disabled}
           onChange={(value) => setTempValue(value as number)}
           labelColor={theme.palette.common.black}
           knobColor={theme.palette.error.darker}

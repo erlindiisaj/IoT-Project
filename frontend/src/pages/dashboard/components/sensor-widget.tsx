@@ -14,6 +14,7 @@ interface SensorWidgetProps {
   changeViewer?: () => void;
   checkButton?: boolean;
   sensor: Sensor;
+  disabled?: boolean;
 }
 
 interface Icons {
@@ -31,6 +32,7 @@ export function SensorWidget({
   changeViewer,
   onClick,
   sensor,
+  disabled,
 }: SensorWidgetProps) {
   const theme = useTheme();
 
@@ -80,6 +82,7 @@ export function SensorWidget({
         </Typography>
         {checkButton && (
           <Switch
+            disabled={disabled}
             onClick={(e) => {
               e.stopPropagation();
               onClick({
