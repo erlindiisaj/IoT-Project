@@ -82,4 +82,4 @@ class ComponentData(models.Model):
     current_value = models.IntegerField()
 
     def __str__(self):
-        return f"{self.component} - {self.get_action_display()} at {self.timestamp}"
+        return f"{self.component} - {self.get_action_display()} at {self.timestamp} with value {self.current_value}"

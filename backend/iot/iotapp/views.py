@@ -95,7 +95,7 @@ def get_components_by_room(request, room_id):
     return Response(serializer.data)
 
 @api_view(['GET'])
-def get_room_components_values(request, room_id):
+def get_room_components_and_values(request, room_id):
     components = Component.objects.filter(room_id=room_id)
     if not components:
         return Response({"error": "No components found for this room"}, status=404)
@@ -169,20 +169,20 @@ def recreate_components(request):
         if component.type == "dht_humidity":
             continue
 
+        if component.type == "led" or component.type == "motor":
+            latest = ComponentData.objects.filter(component_id=component.id).latest('timestamp').current_value
+
         response = requests.post(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}&pin={component.pin}')
         if response.status_code != 200:
             errors.append({"component": component.id, "error_type": "create", "error_code": response.status_code, "error": response.json()})
         else:
-            current_value = ComponentData.objects.filter(component=component) \
-                            .order_by('-timestamp') \
-                            .values_list('current_value', flat=True) \
-                            .first()
-            set_value = requests.put(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}&val={current_value}')
-            if set_value.status_code != 200:
-                errors.append({"component": component.id, "error_type": "set", "error_code": set_value.status_code, "error": response.json()})
-    
+            if component.type == "led" or component.type == "motor":
+                set_value = requests.put(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}&val={latest}')
+                if set_value.status_code != 200:
+                    errors.append({"component": component.id, "error_type": "set", "error_code": set_value.status_code, "error": response.json()})
+        
     if errors:
-        # print(errors)
+        print(errors)
         return Response(errors, status=500)
     
     return Response(status=200)
@@ -233,14 +233,6 @@ def update_component_value(request, component_id):
     
     if value < 0 or value > 100:
         return Response({"error": "Value must be between 0 and 100."}, status=400)
-    
-    previous_value = ComponentData.objects.filter(component=component) \
-                        .order_by('-timestamp') \
-                        .values_list('current_value', flat=True) \
-                        .first()
-    
-    if value == previous_value:
-        return Response(status=204)
 
     response = requests.put(f'http://{ARDUINO_IP}/{component.type}?id={component.room.arduiono_id}&val={value}')
     if response.status_code == 200:
@@ -271,6 +263,29 @@ def get_component_data(request, id):
     serializer = ComponentDataSerializer(data)
     return Response(serializer.data)
 
+@api_view(['GET'])
+def get_component_data_chunk_by_room(request, room_id):
+    room = get_object_or_404(Room, id=room_id)
+    components = Component.objects.filter(room=room)
+
+    if not components.exists():
+        return Response({"error": "No components found for this room"}, status=404)
+
+    data = []
+    for component in components:
+        component_data_qs = ComponentData.objects.filter(component=component).order_by('-timestamp')[:30]
+        if component_data_qs.exists():
+            serializer = ComponentDataSerializer(component_data_qs, many=True)
+            data.append({
+                "component_name": component.type,
+                "data": serializer.data
+            })
+
+    if not data:
+        return Response({"error": "No data found for this room"}, status=404)
+
+    return Response(data)
+
 def get_component_full_data(request, component_id):
     component = get_object_or_404(Component, id=component_id)
     data = ComponentData.objects.filter(component=component)
@@ -284,6 +299,7 @@ def create_component_data(request):
     print(request.data)
     serializer = EventDataSerializer(data=request.data)
     if not serializer.is_valid():
+        print(serializer.errors)
         return Response({"error": serializer.errors}, status=400)
 
     component = get_object_or_404(Component, type=serializer.validated_data['type'], room__arduiono_id=serializer.validated_data['room_id'])

@@ -39,14 +39,14 @@ void setup() {
 
   // Connect to WiFi
   while (status != WL_CONNECTED) {
-    Serial.print("Connecting to ");
+    Serial.println("Connecting to ");
     Serial.println(WIFI_SSID);
     status = WiFi.begin(WIFI_SSID, WIFI_PASS);
     delay(3000);
   }
 
   Serial.println("Connected to WiFi");
-  Serial.print("IP Address: ");
+  Serial.println("IP Address: ");
   Serial.println(WiFi.localIP());
 
   server.begin();
@@ -300,7 +300,7 @@ String createPayload(const String& type, int id, const String& action, const Str
 
 void notifyBackend(const String& payload, const String& apiPoint) {
   WiFiClient client;
-  const char* host = "192.168.1.104";
+  const char* host = "192.168.1.110";
 
   if (client.connect(host, 80)) {
     client.println("POST /" + apiPoint + " HTTP/1.1");
@@ -311,7 +311,7 @@ void notifyBackend(const String& payload, const String& apiPoint) {
     client.println();  // End of headers
     client.print(payload);
 
-    delay(200);  // Give time for request/response
+    delay(500);  // Give time for request/response
 
     Serial.println("Sent payload:");
     Serial.println(payload);
@@ -375,7 +375,7 @@ void handleAssignDht(WiFiClient& client, int id, int pin) {
   humidityValues[id] = 0;
 
   notifyBackend(createPayload("dht", id, "set", "manual", NULL_INT, -100), "event");
-  notifyBackend(createPayload("dht_humidty", id, "set", "manual", NULL_INT, 0.0), "event");
+  notifyBackend(createPayload("dht_humidity", id, "set", "manual", NULL_INT, 0.0), "event");
 
   sendResponse(client, 200, "success", "true");
 }
@@ -488,23 +488,21 @@ void checkMotion(int id) {
   else 
     type = "on";
 
-  if (mode[id] == 1 && motion == HIGH && !motionValues[id]) {
-    notifyBackend(createPayload("pir", id, "on", "auto", 0, 1), "event");
-    switchLed(id, 100, "auto");
-    delay(duration);
-    notifyBackend(createPayload("pir", id, "off", "auto", 1, 0), "event");
-    switchLed(id, 0, "auto");
-  } else if(motionValues[id] != motion){
+  if(motionValues[id] != motion){
     notifyBackend(createPayload("pir", id, type, "auto", motionValues[id], motion), "event");
+    if(mode[id] == 1 && motion == HIGH){
+      switchLed(id, 100, "auto");
+      delay(duration);
+      motion = LOW;
+      notifyBackend(createPayload("pir", id, "off", "auto", 1, 0), "event");
+      switchLed(id, 0, "auto");
+    }
     motionValues[id] = motion;
   }
 }
 
 void rotateMotor(int id, int value, const String& mode) {
   if (motorPins[id] == -1 || value < 0 || value > 100)
-    return;
-
-  if (value == motorValues[id])
     return;
 
   // Determine direction and rotation time
@@ -533,10 +531,7 @@ void rotateMotor(int id, int value, const String& mode) {
 }
 
 void switchLed(int id, int value, const String& mode) {
-  if (ledPins[id] == -1)
-    return;
-
-  if (value < 0 || value > 100)
+  if (ledPins[id] == -1 || value < 0 || value > 100)
     return;
 
   // Determine type based on value
