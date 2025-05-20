@@ -9,9 +9,14 @@ import type { updateComponentValue } from "@interfaces/IComponents";
 interface LedSliderViewProps {
   led: Sensor;
   checkButtonClick: (payload: updateComponentValue) => void;
+  disabled?: boolean;
 }
 
-export function LedSliderView({ led, checkButtonClick }: LedSliderViewProps) {
+export function LedSliderView({
+  led,
+  checkButtonClick,
+  disabled,
+}: LedSliderViewProps) {
   const theme = useTheme();
   const [tempValue, setTempValue] = useState<number>(Number(led.value));
   const [isInteracting, setIsInteracting] = useState(false);
@@ -72,6 +77,7 @@ export function LedSliderView({ led, checkButtonClick }: LedSliderViewProps) {
         </Typography>
         <Switch
           color="error"
+          disabled={disabled}
           onClick={(e) => {
             e.stopPropagation();
             checkButtonClick({
@@ -91,8 +97,11 @@ export function LedSliderView({ led, checkButtonClick }: LedSliderViewProps) {
         <CircularSlider
           label="Led %"
           data={data}
-          dataIndex={tempValue}
-          onChange={(value) => setTempValue(value as number)}
+          knobDraggable={!disabled}
+          dataIndex={tempValue - 1}
+          onChange={(value) => {
+            setTempValue(value as number);
+          }}
           labelColor={theme.palette.common.black}
           knobColor={theme.palette.error.darker}
           progressColorFrom={theme.palette.error.light}

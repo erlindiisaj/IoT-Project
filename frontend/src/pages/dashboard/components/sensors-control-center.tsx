@@ -162,6 +162,7 @@ export function SensorsControlCenter() {
           changeViewer={handleChangeLedViewer}
           checkButton
           sensor={led}
+          disabled={Number(room?.mode) === 0 ? false : true}
         />
         <SensorWidget
           icon={{
@@ -180,12 +181,19 @@ export function SensorsControlCenter() {
           }}
           title="Curtain Motor"
           active={Number(motor.value) > 0 ? false : true}
-          value={Number(motor.value) > 0 ? "Closed" : "Open"}
+          value={
+            Number(motor.value) === 100
+              ? "Closed"
+              : Number(motor.value) === 0
+              ? "Open"
+              : "Toggle"
+          }
           color="warning"
           onClick={handleCurtainClick}
           changeViewer={handleChangeCurtainViewer}
           checkButton
           sensor={motor}
+          disabled={Number(room?.mode) === 0 ? false : true}
         />
         {room && (
           <ModeWidget
@@ -204,9 +212,14 @@ export function SensorsControlCenter() {
         )}
       </Box>
       {currentSliderView === "led" ? (
-        <LedSliderView led={led} checkButtonClick={handleLedClick} />
+        <LedSliderView
+          disabled={Number(room?.mode) === 0 ? false : true}
+          led={led}
+          checkButtonClick={handleLedClick}
+        />
       ) : (
         <CurtainSliderView
+          disabled={Number(room?.mode) === 0 ? false : true}
           curtain={motor}
           checkButtonClick={handleMotionClick}
         />
