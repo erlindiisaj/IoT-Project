@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-+cejy8md29z^k=3-56y)ptx65^#m4a(jpfjcej)-6oz#6exs48
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 ARDUINO_IP = '192.168.146.242'
-FRONTEND = '192.168.146.91'
+FRONTEND = '192.168.1.104'
 ALLOWED_HOSTS = ['192.168.1.110', ARDUINO_IP, FRONTEND ]
 
 
